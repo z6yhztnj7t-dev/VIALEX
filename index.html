@@ -1,0 +1,2415 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>VIALEX — Know your rights. Own your journey.</title>
+  <style>
+    :root {
+      --bg: #F5F1E8;
+      --bg-elevated: #FFFFFF;
+      --bg-soft: #ECE6D8;
+      --text: #1E161B;
+      --text-muted: #5A4C54;
+      --primary: #4B3240;
+      --primary-contrast: #F5F1E8;
+      --secondary: #ADB886;
+      --secondary-contrast: #1E161B;
+      --accent: #7A4E66;
+      --accent-contrast: #FFFFFF;
+      --border: rgba(75, 50, 64, 0.18);
+      --shadow: 0 16px 40px rgba(30, 22, 27, 0.1);
+      --radius-lg: 22px;
+      --radius-md: 14px;
+      --radius-sm: 10px;
+      --ease: cubic-bezier(0.22, 1, 0.36, 1);
+    }
+
+    html[data-scheme="dark"] {
+      --bg: #140F13;
+      --bg-elevated: #21181E;
+      --bg-soft: #2C2028;
+      --text: #F5F1E8;
+      --text-muted: #C8BFC5;
+      --border: rgba(245, 241, 232, 0.16);
+      --shadow: 0 20px 48px rgba(0, 0, 0, 0.5);
+    }
+
+    *, *::before, *::after {
+      box-sizing: border-box;
+    }
+
+    html {
+      scroll-behavior: smooth;
+      overflow-x: hidden;
+    }
+
+    body {
+      margin: 0;
+      padding: 0;
+      font-family: -apple-system, BlinkMacSystemFont, "Inter", "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      line-height: 1.55;
+      overflow-x: hidden;
+      transition: background-color 0.25s ease, color 0.25s ease;
+    }
+
+    a {
+      color: inherit;
+      text-decoration: none;
+    }
+
+    button, input, select, textarea {
+      font-family: inherit;
+      color: inherit;
+    }
+
+    button {
+      cursor: pointer;
+      transition: transform 0.18s var(--ease), background-color 0.2s ease, border-color 0.2s ease, color 0.2s ease;
+    }
+
+    button:active {
+      transform: scale(0.97);
+    }
+
+    /* CANVAS FOR 4-ENGINE TOP-DOWN AIRPLANE (LEFT -> RIGHT) + SPARKS */
+    #fxCanvas {
+      position: fixed;
+      inset: 0;
+      width: 100vw;
+      height: 100vh;
+      pointer-events: none;
+      z-index: 2500;
+      display: none;
+    }
+
+    #fxCanvas.active {
+      display: block;
+    }
+
+    /* HIDE TOPBAR & PINNED MENU DURING INTRO STAGE */
+    body.intro-active .topbar,
+    body.intro-active #menuPopover {
+      display: none !important;
+    }
+
+    body.intro-active main {
+      padding-left: 0 !important;
+    }
+
+    /* INTRO STAGE WHERE TITLE & SLOGAN REVEAL BEHIND PLANE */
+    #introStage {
+      position: fixed;
+      inset: 0;
+      z-index: 2490;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      text-align: center;
+      padding: 24px;
+      background:
+        radial-gradient(circle at 25% 50%, rgba(173, 184, 134, 0.22), transparent 52%),
+        radial-gradient(circle at 75% 50%, rgba(122, 78, 102, 0.34), transparent 56%),
+        linear-gradient(135deg, #271721 0%, #140E12 100%);
+      color: #F5F1E8;
+      transition: opacity 0.45s ease, visibility 0.45s ease;
+    }
+
+    #introStage.hidden {
+      opacity: 0;
+      visibility: hidden;
+      pointer-events: none;
+    }
+
+    .reveal-behind-plane {
+      clip-path: inset(0 calc(100% - var(--reveal-pct, 0%)) 0 0);
+      transition: none;
+    }
+
+    .intro-title-word {
+      margin: 0;
+      font-size: clamp(3.2rem, 11vw, 7.4rem);
+      font-weight: 900;
+      letter-spacing: 0.16em;
+      line-height: 1.02;
+      text-shadow: 0 12px 34px rgba(0, 0, 0, 0.55);
+    }
+
+    .intro-phrase {
+      margin: 18px 0 30px;
+      font-size: clamp(1.05rem, 2.5vw, 1.5rem);
+      line-height: 1.38;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: var(--secondary);
+      font-weight: 700;
+    }
+
+    .intro-actions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 12px;
+      justify-content: center;
+      opacity: 0;
+      transform: translateY(10px);
+      transition: opacity 0.35s ease, transform 0.35s ease;
+    }
+
+    .intro-actions.ready {
+      opacity: 1;
+      transform: translateY(0);
+    }
+
+    /* ALWAYS STICKY TOP BAR */
+    .topbar {
+      position: sticky;
+      top: 0;
+      z-index: 1300;
+      background: color-mix(in srgb, var(--bg-elevated) 92%, transparent);
+      backdrop-filter: blur(12px);
+      border-bottom: 1px solid var(--border);
+      box-shadow: 0 6px 22px rgba(0, 0, 0, 0.08);
+    }
+
+    .topbar-inner {
+      max-width: 1380px;
+      margin: 0 auto;
+      padding: 10px 20px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+    }
+
+    .logo {
+      font-weight: 900;
+      font-size: 1.2rem;
+      letter-spacing: 0.12em;
+      color: var(--primary);
+      white-space: nowrap;
+    }
+
+    .menu-trigger-btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      background: var(--primary);
+      color: var(--primary-contrast);
+      border: none;
+      border-radius: 999px;
+      padding: 8px 16px;
+      font-size: 0.9rem;
+      font-weight: 700;
+      white-space: nowrap;
+    }
+
+    .menu-trigger-btn:hover {
+      background: var(--accent);
+      color: var(--accent-contrast);
+    }
+
+    .quick-links {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      flex-wrap: wrap;
+    }
+
+    .quick-link {
+      padding: 6px 10px;
+      border-radius: var(--radius-sm);
+      font-size: 0.85rem;
+      font-weight: 600;
+      white-space: nowrap;
+      transition: background-color 0.2s ease, color 0.2s ease;
+    }
+
+    .quick-link:hover {
+      background: var(--bg-soft);
+      color: var(--primary);
+    }
+
+    .topbar-right {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      flex-shrink: 0;
+    }
+
+    /* LANGUAGE SWITCHER PILL */
+    .lang-switcher {
+      display: inline-flex;
+      align-items: center;
+      background: var(--bg-soft);
+      border: 1px solid var(--border);
+      border-radius: 999px;
+      padding: 2px;
+      gap: 2px;
+    }
+
+    .lang-btn {
+      border: none;
+      background: transparent;
+      border-radius: 999px;
+      padding: 5px 9px;
+      font-size: 0.78rem;
+      font-weight: 800;
+      color: var(--text-muted);
+      letter-spacing: 0.04em;
+    }
+
+    .lang-btn:hover {
+      color: var(--text);
+    }
+
+    .lang-btn.active {
+      background: var(--primary);
+      color: var(--primary-contrast);
+    }
+
+    .small-btn {
+      background: var(--bg-soft);
+      border: 1px solid var(--border);
+      border-radius: 999px;
+      padding: 7px 12px;
+      font-size: 0.82rem;
+      font-weight: 700;
+      white-space: nowrap;
+    }
+
+    .small-btn:hover,
+    .small-btn.active {
+      border-color: var(--primary);
+      background: var(--primary);
+      color: var(--primary-contrast);
+    }
+
+    /* PINNED / FIXED MENU WINDOW (ALWAYS VISIBLE & OPEN BY DEFAULT) */
+    .menu-popover {
+      display: none;
+      position: fixed;
+      top: 60px;
+      left: 16px;
+      z-index: 2450;
+      width: min(310px, calc(100vw - 32px));
+      max-height: calc(100vh - 76px);
+      overflow-y: auto;
+      background: var(--bg-elevated);
+      border: 1.5px solid var(--primary);
+      border-radius: var(--radius-lg);
+      box-shadow: var(--shadow);
+      padding: 14px;
+    }
+
+    .menu-popover.open {
+      display: block;
+    }
+
+    .menu-popover.collapsed .menu-popover-body {
+      display: none;
+    }
+
+    .menu-popover-head {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+      margin-bottom: 10px;
+      padding-bottom: 8px;
+      border-bottom: 1px solid var(--border);
+      font-weight: 800;
+      color: var(--primary);
+    }
+
+    .menu-popover.collapsed .menu-popover-head {
+      margin-bottom: 0;
+      padding-bottom: 0;
+      border-bottom: none;
+    }
+
+    .menu-popover-lang {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+      margin-bottom: 10px;
+      padding: 7px 10px;
+      border-radius: var(--radius-sm);
+      background: var(--bg-soft);
+      font-size: 0.82rem;
+      font-weight: 700;
+    }
+
+    .menu-popover-list {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+
+    .menu-popover-item {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 9px 12px;
+      border-radius: var(--radius-sm);
+      background: var(--bg);
+      border: 1px solid var(--border);
+      font-weight: 600;
+      font-size: 0.9rem;
+    }
+
+    .menu-popover-item:hover {
+      background: var(--bg-soft);
+      border-color: var(--accent);
+    }
+
+    /* COLOR & THEME MODAL WINDOW */
+    .color-modal-backdrop {
+      display: none;
+      position: fixed;
+      inset: 0;
+      z-index: 2480;
+      background: rgba(15, 10, 14, 0.58);
+      backdrop-filter: blur(5px);
+      align-items: center;
+      justify-content: center;
+      padding: 18px;
+    }
+
+    .color-modal-backdrop.open {
+      display: flex;
+    }
+
+    .color-modal-window {
+      width: 100%;
+      max-width: 520px;
+      max-height: 88vh;
+      overflow-y: auto;
+      background: var(--bg-elevated);
+      color: var(--text);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-lg);
+      padding: 24px;
+      box-shadow: var(--shadow);
+    }
+
+    .color-modal-head {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 12px;
+    }
+
+    .palette-list {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin: 10px 0 16px;
+    }
+
+    .palette-chip {
+      display: inline-flex;
+      align-items: center;
+      gap: 7px;
+      padding: 6px 12px;
+      border-radius: 999px;
+      border: 1px solid var(--border);
+      background: var(--bg-soft);
+      font-size: 0.8rem;
+      font-weight: 700;
+    }
+
+    .palette-chip:hover {
+      border-color: var(--accent);
+    }
+
+    .swatch {
+      width: 12px;
+      height: 12px;
+      border-radius: 50%;
+      border: 1px solid rgba(0, 0, 0, 0.25);
+    }
+
+    .pickers-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(120px, 1fr));
+      gap: 10px;
+    }
+
+    .picker-item {
+      display: flex;
+      flex-direction: column;
+      gap: 5px;
+      font-size: 0.82rem;
+      font-weight: 700;
+    }
+
+    .picker-item input[type="color"] {
+      width: 100%;
+      height: 36px;
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      background: transparent;
+      cursor: pointer;
+    }
+
+    .color-modal-foot {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 10px;
+      margin-top: 20px;
+      padding-top: 14px;
+      border-top: 1px solid var(--border);
+    }
+
+    @media (min-width: 1120px) {
+      body.has-pinned-menu main {
+        padding-left: 316px;
+      }
+    }
+
+    @media (max-width: 1060px) {
+      .quick-links {
+        display: none;
+      }
+    }
+
+    /* PAGE SECTIONS */
+    .container {
+      max-width: 1240px;
+      margin: 0 auto;
+      padding: 0 20px;
+    }
+
+    section {
+      padding: 64px 0;
+      scroll-margin-top: 72px;
+    }
+
+    .kicker {
+      font-size: 0.78rem;
+      font-weight: 800;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      color: var(--accent);
+      margin-bottom: 8px;
+    }
+
+    h1, h2, h3, h4 {
+      margin-top: 0;
+    }
+
+    .section-title {
+      font-size: clamp(1.8rem, 3.8vw, 2.8rem);
+      font-weight: 800;
+      color: var(--primary);
+      margin-bottom: 12px;
+      line-height: 1.12;
+    }
+
+    .lead {
+      color: var(--text-muted);
+      max-width: 72ch;
+      margin-bottom: 24px;
+    }
+
+    .hero-box {
+      background: var(--bg-elevated);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-lg);
+      padding: 32px;
+      box-shadow: var(--shadow);
+    }
+
+    .hero-title {
+      font-size: clamp(2.2rem, 5vw, 3.8rem);
+      font-weight: 900;
+      line-height: 1.06;
+      margin-bottom: 14px;
+    }
+
+    .hero-title em {
+      color: var(--accent);
+      font-style: italic;
+    }
+
+    .btn-main {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      background: var(--primary);
+      color: var(--primary-contrast);
+      border: none;
+      border-radius: 999px;
+      padding: 12px 24px;
+      font-weight: 700;
+      font-size: 0.94rem;
+    }
+
+    .btn-main:hover {
+      background: var(--accent);
+      color: var(--accent-contrast);
+    }
+
+    .btn-ghost {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      background: var(--bg-soft);
+      color: var(--text);
+      border: 1px solid var(--border);
+      border-radius: 999px;
+      padding: 12px 22px;
+      font-weight: 700;
+      font-size: 0.94rem;
+    }
+
+    .btn-ghost:hover {
+      border-color: var(--primary);
+    }
+
+    .cards-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(245px, 1fr));
+      gap: 14px;
+      margin-top: 24px;
+    }
+
+    .card {
+      background: var(--bg-elevated);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-md);
+      padding: 18px;
+      box-shadow: var(--shadow);
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      gap: 12px;
+    }
+
+    .card-num {
+      font-size: 0.75rem;
+      font-weight: 800;
+      letter-spacing: 0.08em;
+      color: var(--accent);
+      text-transform: uppercase;
+    }
+
+    .card-title {
+      margin: 4px 0 6px;
+      font-size: 1.04rem;
+      font-weight: 800;
+      color: var(--primary);
+    }
+
+    .card-text {
+      margin: 0;
+      font-size: 0.9rem;
+      color: var(--text-muted);
+    }
+
+    .card-link {
+      align-self: flex-start;
+      font-size: 0.84rem;
+      font-weight: 700;
+      color: var(--accent);
+      background: none;
+      border: none;
+      padding: 0;
+    }
+
+    .card-link:hover {
+      text-decoration: underline;
+    }
+
+    .panel {
+      background: var(--bg-elevated);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-lg);
+      padding: 24px;
+      box-shadow: var(--shadow);
+    }
+
+    .form-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      gap: 14px;
+      margin-top: 14px;
+    }
+
+    .field {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+
+    .field label {
+      font-size: 0.88rem;
+      font-weight: 700;
+    }
+
+    .input, .select, .textarea {
+      width: 100%;
+      padding: 10px 12px;
+      border-radius: var(--radius-sm);
+      border: 1px solid var(--border);
+      background: var(--bg);
+      font-size: 0.94rem;
+    }
+
+    .input:focus, .select:focus, .textarea:focus {
+      outline: 2px solid color-mix(in srgb, var(--accent) 45%, transparent);
+      border-color: var(--accent);
+    }
+
+    .textarea {
+      min-height: 240px;
+      resize: vertical;
+    }
+
+    .row-actions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      margin-top: 18px;
+    }
+
+    .report-out {
+      margin-top: 24px;
+      padding-top: 20px;
+      border-top: 2px solid var(--border);
+    }
+
+    .report-block {
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-md);
+      padding: 14px 16px;
+      margin-bottom: 10px;
+    }
+
+    .report-block h4 {
+      margin: 0 0 6px;
+      font-size: 0.96rem;
+      color: var(--primary);
+    }
+
+    .report-block ul {
+      margin: 6px 0 0;
+      padding-left: 18px;
+    }
+
+    .report-block li {
+      margin-bottom: 4px;
+      font-size: 0.91rem;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+    }
+
+    th, td {
+      padding: 12px 14px;
+      text-align: left;
+      border-bottom: 1px solid var(--border);
+    }
+
+    th {
+      background: var(--bg-soft);
+      color: var(--primary);
+    }
+
+    .badge {
+      display: inline-block;
+      padding: 4px 10px;
+      border-radius: 999px;
+      font-size: 0.78rem;
+      font-weight: 700;
+      background: var(--bg-soft);
+    }
+
+    .badge.ok {
+      background: color-mix(in srgb, var(--secondary) 35%, var(--bg-soft));
+      color: var(--text);
+    }
+
+    .badge.warn {
+      background: color-mix(in srgb, var(--accent) 20%, var(--bg-soft));
+      color: var(--primary);
+    }
+
+    .faq-list {
+      display: grid;
+      gap: 12px;
+      margin-top: 18px;
+    }
+
+    details.faq-item {
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-md);
+      padding: 14px 16px;
+    }
+
+    details.faq-item summary {
+      font-weight: 700;
+      cursor: pointer;
+      color: var(--primary);
+    }
+
+    details.faq-item p {
+      margin: 10px 0 0;
+      color: var(--text-muted);
+      font-size: 0.92rem;
+    }
+
+    @media print {
+      #fxCanvas, #introStage, .topbar, #menuPopover, #colorModal, .row-actions, #hero, #navigator, #rights, #legislation, #board, #about {
+        display: none !important;
+      }
+      body {
+        background: #FFFFFF !important;
+        color: #000000 !important;
+      }
+      #documents {
+        display: block !important;
+        padding: 0 !important;
+      }
+      .panel {
+        box-shadow: none !important;
+        border: none !important;
+        padding: 0 !important;
+      }
+      .textarea {
+        border: none !important;
+        background: transparent !important;
+        min-height: auto !important;
+      }
+    }
+  </style>
+</head>
+<body class="intro-active">
+  <!-- CANVAS FOR 4-ENGINE TOP-DOWN AIRPLANE (LEFT -> RIGHT) + SPARKS -->
+  <canvas id="fxCanvas" class="active"></canvas>
+
+  <!-- INTRO STAGE: NAME & SLOGAN REVEAL BEHIND THE PLANE FROM LEFT TO RIGHT -->
+  <div id="introStage">
+    <button type="button" id="closeIntroCornerBtn" class="small-btn" style="position:fixed; top:16px; right:16px; z-index:2460;" aria-label="Закрыть заставку">✕</button>
+    <div id="revealBox" class="reveal-behind-plane" style="--reveal-pct: 0%;">
+      <h1 class="intro-title-word">VIALEX</h1>
+      <p class="intro-phrase">Know your rights.<br />Own your journey.</p>
+    </div>
+
+    <div id="introActions" class="intro-actions">
+      <button type="button" id="replayIntroBtn" class="btn-ghost" data-i18n="introReplay">✈ Повторить полёт</button>
+      <button type="button" id="enterSiteBtn" class="btn-main" data-i18n="introEnter">Перейти к VIALEX</button>
+    </div>
+  </div>
+
+  <!-- ALWAYS STICKY TOP BAR -->
+  <header class="topbar" id="topbar">
+    <div class="topbar-inner">
+      <div style="display:flex; align-items:center; gap:10px;">
+        <button type="button" id="openMenuBtn" class="menu-trigger-btn" aria-expanded="true" aria-controls="menuPopover">
+          <span data-i18n="menuBtn">☰ Меню</span>
+        </button>
+        <a href="#hero" class="logo">VIALEX</a>
+      </div>
+
+      <nav class="quick-links" aria-label="Быстрая навигация">
+        <a href="#hero" class="quick-link" data-i18n="navHome">Главная</a>
+        <a href="#navigator" class="quick-link" data-i18n="navNavigator">Навигатор</a>
+        <a href="#rights" class="quick-link" data-i18n="navRights">Права</a>
+        <a href="#legislation" class="quick-link" data-i18n="navLaws">Законы РК</a>
+        <a href="#documents" class="quick-link" data-i18n="navClaim">Претензия</a>
+        <a href="#board" class="quick-link" data-i18n="navBoard">Табло</a>
+        <a href="#about" class="quick-link" data-i18n="navFaq">FAQ</a>
+      </nav>
+
+      <div class="topbar-right">
+        <!-- ПЕРЕКЛЮЧАТЕЛЬ ЯЗЫКОВ (RU / KZ / EN) -->
+        <div class="lang-switcher" role="group" aria-label="Выбор языка">
+          <button type="button" class="lang-btn active" data-lang-choice="ru">RU</button>
+          <button type="button" class="lang-btn" data-lang-choice="kz">KZ</button>
+          <button type="button" class="lang-btn" data-lang-choice="en">EN</button>
+        </div>
+        <button type="button" id="openColorModalBtn" class="small-btn" data-i18n="colorsBtn">Цвета</button>
+        <button type="button" id="topFlightBtn" class="small-btn" data-i18n="flightBtn">✈ Полёт</button>
+      </div>
+    </div>
+  </header>
+
+  <!-- ЗАКРЕПЛЁННОЕ ОКНО МЕНЮ -->
+  <aside id="menuPopover" class="menu-popover open" aria-label="Закреплённое меню разделов VIALEX">
+    <div class="menu-popover-head">
+      <span data-i18n="menuTitle">📌 Меню разделов</span>
+      <div style="display:flex; gap:6px;">
+        <button type="button" id="toggleMenuCollapseBtn" class="small-btn" data-i18n="collapseBtn">Свернуть</button>
+        <button type="button" id="closeMenuBtn" class="small-btn" title="Скрыть">✕</button>
+      </div>
+    </div>
+    <div class="menu-popover-body">
+      <div class="menu-popover-lang">
+        <span data-i18n="langLabel">Язык / Тіл / Lang:</span>
+        <div class="lang-switcher">
+          <button type="button" class="lang-btn active" data-lang-choice="ru">RU</button>
+          <button type="button" class="lang-btn" data-lang-choice="kz">KZ</button>
+          <button type="button" class="lang-btn" data-lang-choice="en">EN</button>
+        </div>
+      </div>
+      <div class="menu-popover-list">
+        <a href="#hero" class="menu-popover-item"><span data-i18n="m1">1. Главная</span><span>→</span></a>
+        <a href="#navigator" class="menu-popover-item"><span data-i18n="m2">2. Правовой навигатор</span><span>→</span></a>
+        <a href="#rights" class="menu-popover-item"><span data-i18n="m3">3. Права пассажиров</span><span>→</span></a>
+        <a href="#legislation" class="menu-popover-item"><span data-i18n="m4">4. Законодательная база РК</span><span>→</span></a>
+        <a href="#documents" class="menu-popover-item"><span data-i18n="m5">5. Генератор претензии</span><span>→</span></a>
+        <a href="#board" class="menu-popover-item"><span data-i18n="m6">6. Табло рейсов (демо)</span><span>→</span></a>
+        <a href="#about" class="menu-popover-item"><span data-i18n="m7">7. О проекте и FAQ</span><span>→</span></a>
+      </div>
+    </div>
+  </aside>
+
+  <!-- COLOR & THEME MODAL WINDOW -->
+  <div id="colorModal" class="color-modal-backdrop" role="dialog" aria-modal="true" aria-labelledby="colorModalTitle">
+    <div class="color-modal-window">
+      <div class="color-modal-head">
+        <h3 id="colorModalTitle" style="margin:0; font-size:1.2rem; color:var(--primary);" data-i18n="colorModalTitle">Цветовая гамма и тема</h3>
+        <button type="button" id="closeColorModalX" class="small-btn">✕</button>
+      </div>
+      <p style="margin:0 0 12px; font-size:0.88rem; color:var(--text-muted);" data-i18n="colorModalDesc">
+        Выберите режим оформления, готовую палитру или задайте свои цвета — дополнительный и акцентный цвета сразу окрасят след самолёта и искры, а кнопка «ОК» применит и закроет окно.
+      </p>
+
+      <div style="display:flex; flex-wrap:wrap; gap:8px; margin-bottom:14px;">
+        <button type="button" class="small-btn" data-scheme-choice="light" data-i18n="themeLight">Светлая</button>
+        <button type="button" class="small-btn" data-scheme-choice="dark" data-i18n="themeDark">Тёмная</button>
+        <button type="button" class="small-btn" data-scheme-choice="system" data-i18n="themeSystem">Системная</button>
+      </div>
+
+      <strong style="font-size:0.86rem;" data-i18n="palettesHeading">Готовые палитры</strong>
+      <div id="paletteList" class="palette-list"></div>
+
+      <strong style="font-size:0.86rem;" data-i18n="customColorsHeading">Свои цвета</strong>
+      <div class="pickers-grid" style="margin-top:8px;">
+        <label class="picker-item">
+          <span data-i18n="pickerPrimary">Основной</span>
+          <input type="color" id="colorPrimary" value="#4B3240" />
+        </label>
+        <label class="picker-item">
+          <span data-i18n="pickerSecondary">Дополнительный (след / искры)</span>
+          <input type="color" id="colorSecondary" value="#ADB886" />
+        </label>
+        <label class="picker-item">
+          <span data-i18n="pickerAccent">Акцентный (след / искры)</span>
+          <input type="color" id="colorAccent" value="#7A4E66" />
+        </label>
+        <label class="picker-item">
+          <span data-i18n="pickerBg">Фон</span>
+          <input type="color" id="colorBg" value="#F5F1E8" />
+        </label>
+      </div>
+
+      <div class="color-modal-foot">
+        <button type="button" id="resetColorsBtn" class="btn-ghost" style="padding:8px 16px; font-size:0.84rem;" data-i18n="resetBtn">Сбросить</button>
+        <button type="button" id="confirmColorsOkBtn" class="btn-main" style="padding:9px 24px; font-size:0.9rem;" data-i18n="okBtn">ОК</button>
+      </div>
+    </div>
+  </div>
+
+  <main>
+    <section id="hero">
+      <div class="container">
+        <div class="hero-box">
+          <div class="kicker" data-i18n="heroKicker">РЕСПУБЛИКА КАЗАХСТАН • LEGALTECH</div>
+          <h2 class="hero-title">Know your rights.<br /><em>Own your journey.</em></h2>
+          <p class="lead" data-i18n="heroLead">
+            Образовательный цифровой помощник авиапассажира в Казахстане: разбор ситуаций при задержке, отмене рейса, изменении расписания, отказе в посадке, пропущенной стыковке и проблемах с багажом, предварительный юридический отчёт и черновик претензии.
+          </p>
+          <div class="row-actions">
+            <a href="#navigator" class="btn-main" data-i18n="heroBtn1">Открыть правовой навигатор</a>
+            <a href="#documents" class="btn-ghost" data-i18n="heroBtn2">Перейти к претензии</a>
+          </div>
+          <div class="cards-grid" id="heroSituations"></div>
+        </div>
+      </div>
+    </section>
+
+    <section id="navigator">
+      <div class="container">
+        <div class="kicker" data-i18n="navKicker">ПРАВОВОЙ НАВИГАТОР</div>
+        <h2 class="section-title" data-i18n="navTitle">Интерактивный юридический калькулятор</h2>
+        <p class="lead" data-i18n="navLead">Выберите сценарий, заполните известные данные (необязательные поля можно пропустить) и сформируйте предварительный отчёт.</p>
+
+        <div class="panel">
+          <div class="form-grid">
+            <div class="field">
+              <label for="calcScenario" data-i18n="lblScenario">Ситуация</label>
+              <select id="calcScenario" class="select">
+                <option value="Задержка рейса" data-i18n="opt1">1. Задержка рейса</option>
+                <option value="Отмена рейса" data-i18n="opt2">2. Отмена рейса</option>
+                <option value="Изменение расписания или маршрута" data-i18n="opt3">3. Изменение расписания или маршрута</option>
+                <option value="Отказ в посадке" data-i18n="opt4">4. Отказ в посадке</option>
+                <option value="Пропущенная стыковка" data-i18n="opt5">5. Пропущенная стыковка</option>
+                <option value="Проблемы с багажом" data-i18n="opt6">6. Проблемы с багажом</option>
+                <option value="Другая ситуация" data-i18n="opt7">7. Другая ситуация</option>
+              </select>
+            </div>
+            <div class="field">
+              <label for="calcDate" data-i18n="lblDate">Дата рейса / события</label>
+              <input type="date" id="calcDate" class="input" />
+            </div>
+            <div class="field">
+              <label for="calcRoute" data-i18n="lblRoute">Маршрут / рейс</label>
+              <input type="text" id="calcRoute" class="input" placeholder="Например: NQZ — ALA, рейс KC..." />
+            </div>
+            <div class="field">
+              <label for="calcFacts" data-i18n="lblFacts">Ключевые факты / реакция перевозчика</label>
+              <input type="text" id="calcFacts" class="input" placeholder="Задержка, уведомление, питание, багаж..." />
+            </div>
+          </div>
+
+          <div class="row-actions">
+            <button type="button" id="buildReportBtn" class="btn-main" data-i18n="btnBuildReport">Сформировать предварительный отчёт</button>
+            <button type="button" id="fillClaimFromReportBtn" class="btn-ghost" data-i18n="btnFillClaim">Перенести в претензию</button>
+          </div>
+
+          <div id="reportBox" class="report-out" style="display:none;"></div>
+        </div>
+      </div>
+    </section>
+
+    <section id="rights">
+      <div class="container">
+        <div class="kicker" data-i18n="rightsKicker">ПРАВА ПАССАЖИРОВ</div>
+        <h2 class="section-title" data-i18n="rightsTitle">10 типовых ситуаций на воздушном транспорте</h2>
+        <div class="cards-grid" id="rightsGrid"></div>
+      </div>
+    </section>
+
+    <section id="legislation">
+      <div class="container">
+        <div class="kicker" data-i18n="lawsKicker">ЗАКОНОДАТЕЛЬНАЯ БАЗА РК</div>
+        <h2 class="section-title" data-i18n="lawsTitle">Нормативные акты и справочные карточки</h2>
+        <p class="lead">
+          <span data-i18n="lawsLead">Сверяйте актуальные редакции на официальном портале ИПС «Әділет»</span>
+          (<a href="https://adilet.zan.kz/" target="_blank" rel="noopener noreferrer" style="color:var(--accent); text-decoration:underline;">adilet.zan.kz</a>).
+        </p>
+        <div class="cards-grid" id="lawsGrid"></div>
+      </div>
+    </section>
+
+    <section id="documents">
+      <div class="container">
+        <div class="kicker" data-i18n="docsKicker">МОИ ДОКУМЕНТЫ</div>
+        <h2 class="section-title" data-i18n="docsTitle">Генератор проекта претензии</h2>
+        <div class="panel">
+          <div class="form-grid">
+            <div class="field">
+              <label for="claimTo" data-i18n="lblClaimTo">Адресат</label>
+              <input type="text" id="claimTo" class="input" placeholder="Наименование авиаперевозчика" />
+            </div>
+            <div class="field">
+              <label for="claimFrom" data-i18n="lblClaimFrom">Заявитель</label>
+              <input type="text" id="claimFrom" class="input" placeholder="ФИО и контакты" />
+            </div>
+          </div>
+          <div class="field" style="margin-top:14px;">
+            <label for="claimText" data-i18n="lblClaimText">Текст претензии</label>
+            <textarea id="claimText" class="textarea"></textarea>
+          </div>
+          <div class="row-actions">
+            <button type="button" id="regenerateClaimBtn" class="btn-ghost" data-i18n="btnRegenClaim">Обновить шаблон</button>
+            <button type="button" id="copyClaimBtn" class="btn-main" data-i18n="btnCopyClaim">Копировать текст</button>
+            <button type="button" id="printClaimBtn" class="btn-ghost" data-i18n="btnPrintClaim">Печать / PDF</button>
+          </div>
+          <p id="claimStatus" style="margin:10px 0 0; font-size:0.88rem; color:var(--accent); font-weight:700;"></p>
+        </div>
+      </div>
+    </section>
+
+    <section id="board">
+      <div class="container">
+        <div class="kicker" data-i18n="boardKicker">FLIGHT BOARD • АСТАНА (NQZ) & ДЕМО</div>
+        <h2 class="section-title" data-i18n="boardTitle">Табло рейсов Астаны (NQZ) и интерактивный разбор</h2>
+        <div class="panel" style="margin-bottom:16px;">
+          <p class="lead" style="margin-bottom:12px;">
+            <strong>Почему живое табло нельзя встроить напрямую в один локальный HTML-файл?</strong> Сайты аэропортов и авиатрекеров закрывают прямой доступ из чужих браузерных страниц (защита CORS / отсутствие бесплатного публичного виджета без ключа или серверного прокси). Поэтому в самом файле работает <strong>интерактивное демо-табло</strong> (чтобы сразу проверить сценарий в калькуляторе), а для <strong>реального табло аэропорта Астаны (NQZ)</strong> мы вынесли прямые ссылки на официальный сайт и расписание:
+          </p>
+          <div class="row-actions" style="margin-top:8px;">
+            <a href="https://www.nn-airport.kz/flight-status" target="_blank" rel="noopener noreferrer" class="btn-main">Онлайн-табло аэропорта Астаны (nn-airport.kz) ↗</a>
+            <a href="https://t.rasp.yandex.kz/station/9623556/" target="_blank" rel="noopener noreferrer" class="btn-ghost">Табло рейсов Астаны на Яндекс Расписаниях ↗</a>
+          </div>
+        </div>
+        <div class="panel" style="overflow-x:auto;">
+          <table>
+            <thead>
+              <tr>
+                <th data-i18n="thFlight">Рейс</th>
+                <th data-i18n="thAirport">Аэропорт</th>
+                <th data-i18n="thTime">Время</th>
+                <th data-i18n="thStatus">Статус</th>
+                <th data-i18n="thAction">Действие</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td><strong>VX-101 (ДЕМО)</strong></td>
+                <td>NQZ — Астана</td>
+                <td>10:15</td>
+                <td><span class="badge ok">ON TIME</span></td>
+                <td><button type="button" class="small-btn" data-demo-flight="VX-101 (NQZ — Астана)|Задержка рейса|Штатный вылет по расписанию (демо-сценарий)" data-i18n="btnCheck">Проверить</button></td>
+              </tr>
+              <tr>
+                <td><strong>VX-204 (ДЕМО)</strong></td>
+                <td>ALA — Алматы</td>
+                <td>12:40</td>
+                <td><span class="badge warn">DELAYED</span></td>
+                <td><button type="button" class="small-btn" data-demo-flight="VX-204 (ALA — Алматы)|Задержка рейса|Рейс задержан более чем на 2 часа, требуется уточнение статуса обеспечения напитками, питанием и размещением" data-i18n="btnCheckDelay">Разобрать задержку</button></td>
+              </tr>
+              <tr>
+                <td><strong>VX-309 (ДЕМО)</strong></td>
+                <td>SCO — Актау</td>
+                <td>14:20</td>
+                <td><span class="badge ok">BOARDING</span></td>
+                <td><button type="button" class="small-btn" data-demo-flight="VX-309 (SCO — Актау)|Отказ в посадке|Проверка прав при посадке и оформлении посадочного талона" data-i18n="btnCheck">Проверить</button></td>
+              </tr>
+              <tr>
+                <td><strong>VX-412 (ДЕМО)</strong></td>
+                <td>CIT — Шымкент</td>
+                <td>15:50</td>
+                <td><span class="badge warn">CANCELLED</span></td>
+                <td><button type="button" class="small-btn" data-demo-flight="VX-412 (CIT — Шымкент)|Отмена рейса|Рейс отменён, необходим выбор между возвратом средств и перебронированием" data-i18n="btnCheckCancel">Разобрать отмену</button></td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <section id="about">
+      <div class="container">
+        <div class="kicker" data-i18n="aboutKicker">О ПРОЕКТЕ И FAQ</div>
+        <h2 class="section-title" data-i18n="aboutTitle">Правовое предупреждение и частые вопросы</h2>
+        <div class="panel">
+          <p style="margin:0;" data-i18n="aboutText">
+            VIALEX — информационно-образовательный LegalTech-проект для пассажиров воздушного транспорта Республики Казахстан. Материалы носят предварительный справочный характер и не заменяют индивидуальную юридическую консультацию.
+          </p>
+          <div class="faq-list" id="faqList"></div>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <script>
+    (function () {
+      const canvas = document.getElementById("fxCanvas");
+      const ctx = canvas.getContext("2d");
+      const introStage = document.getElementById("introStage");
+      const revealBox = document.getElementById("revealBox");
+      const introActions = document.getElementById("introActions");
+      const menuPopover = document.getElementById("menuPopover");
+      const openMenuBtn = document.getElementById("openMenuBtn");
+      const closeMenuBtn = document.getElementById("closeMenuBtn");
+      const toggleMenuCollapseBtn = document.getElementById("toggleMenuCollapseBtn");
+      const colorModal = document.getElementById("colorModal");
+      const openColorModalBtn = document.getElementById("openColorModalBtn");
+      const closeColorModalX = document.getElementById("closeColorModalX");
+      const confirmColorsOkBtn = document.getElementById("confirmColorsOkBtn");
+      const resetColorsBtn = document.getElementById("resetColorsBtn");
+      const topFlightBtn = document.getElementById("topFlightBtn");
+      const replayIntroBtn = document.getElementById("replayIntroBtn");
+      const enterSiteBtn = document.getElementById("enterSiteBtn");
+
+      const STORAGE_KEY = "vialex_prefs_v2";
+
+      const PALETTES = [
+        { name: "VIALEX Signature", primary: "#4B3240", secondary: "#ADB886", accent: "#7A4E66", bgLight: "#F5F1E8", bgDark: "#140F13" },
+        { name: "Electric Violet", primary: "#5B21B6", secondary: "#C4B5FD", accent: "#7C3AED", bgLight: "#F5F3FF", bgDark: "#140F24" },
+        { name: "Neon Lime", primary: "#3F6212", secondary: "#BEF264", accent: "#65A30D", bgLight: "#F7FEE7", bgDark: "#131A0B" },
+        { name: "Acid Green", primary: "#14532D", secondary: "#4ADE80", accent: "#16A34A", bgLight: "#F0FDF4", bgDark: "#0D1A12" },
+        { name: "Lavender", primary: "#4C1D95", secondary: "#DDD6FE", accent: "#8B5CF6", bgLight: "#FAF5FF", bgDark: "#181224" },
+        { name: "Electric Pink", primary: "#831843", secondary: "#F9A8D4", accent: "#DB2777", bgLight: "#FDF2F8", bgDark: "#210E17" },
+        { name: "Cyber Blue", primary: "#0C4A6E", secondary: "#7DD3FC", accent: "#0284C7", bgLight: "#F0F9FF", bgDark: "#0B1922" },
+        { name: "Deep Blue", primary: "#1E3A8A", secondary: "#93C5FD", accent: "#2563EB", bgLight: "#EFF6FF", bgDark: "#0E1629" }
+      ];
+
+      const DEFAULT_STATE = {
+        lang: "ru",
+        mode: "system",
+        primary: "#4B3240",
+        secondary: "#ADB886",
+        accent: "#7A4E66",
+        bg: "#F5F1E8"
+      };
+
+      const appState = { ...DEFAULT_STATE };
+
+      const I18N = {
+        ru: {
+          introReplay: "✈ Повторить полёт",
+          introEnter: "Перейти к VIALEX",
+          menuBtn: "☰ Меню",
+          navHome: "Главная",
+          navNavigator: "Навигатор",
+          navRights: "Права",
+          navLaws: "Законы РК",
+          navClaim: "Претензия",
+          navBoard: "Табло",
+          navFaq: "FAQ",
+          colorsBtn: "Цвета",
+          flightBtn: "✈ Полёт",
+          menuTitle: "📌 Меню разделов",
+          collapseBtn: "Свернуть",
+          expandBtn: "Развернуть",
+          langLabel: "Язык / Тіл / Lang:",
+          m1: "1. Главная",
+          m2: "2. Правовой навигатор",
+          m3: "3. Права пассажиров",
+          m4: "4. Законодательная база РК",
+          m5: "5. Генератор претензии",
+          m6: "6. Табло рейсов (демо)",
+          m7: "7. О проекте и FAQ",
+          colorModalTitle: "Цветовая гамма и тема",
+          colorModalDesc: "Выберите режим оформления, готовую палитру или задайте свои цвета — дополнительный и акцентный цвета сразу окрасят след самолёта и искры, а кнопка «ОК» применит и закроет окно.",
+          themeLight: "Светлая",
+          themeDark: "Тёмная",
+          themeSystem: "Системная",
+          palettesHeading: "Готовые палитры",
+          customColorsHeading: "Свои цвета",
+          pickerPrimary: "Основной",
+          pickerSecondary: "Дополнительный (след / искры)",
+          pickerAccent: "Акцентный (след / искры)",
+          pickerBg: "Фон",
+          resetBtn: "Сбросить",
+          okBtn: "ОК",
+          heroKicker: "РЕСПУБЛИКА КАЗАХСТАН • LEGALTECH",
+          heroLead: "Образовательный цифровой помощник авиапассажира в Казахстане: разбор ситуаций при задержке, отмене рейса, изменении расписания, отказе в посадке, пропущенной стыковке и проблемах с багажом, предварительный юридический отчёт и черновик претензии.",
+          heroBtn1: "Открыть правовой навигатор",
+          heroBtn2: "Перейти к претензии",
+          navKicker: "ПРАВОВОЙ НАВИГАТОР",
+          navTitle: "Интерактивный юридический калькулятор",
+          navLead: "Выберите сценарий, заполните известные данные (необязательные поля можно пропустить) и сформируйте предварительный отчёт.",
+          lblScenario: "Ситуация",
+          opt1: "1. Задержка рейса",
+          opt2: "2. Отмена рейса",
+          opt3: "3. Изменение расписания или маршрута",
+          opt4: "4. Отказ в посадке",
+          opt5: "5. Пропущенная стыковка",
+          opt6: "6. Проблемы с багажом",
+          opt7: "7. Другая ситуация",
+          lblDate: "Дата рейса / события",
+          lblRoute: "Маршрут / рейс",
+          lblFacts: "Ключевые факты / реакция перевозчика",
+          btnBuildReport: "Сформировать предварительный отчёт",
+          btnFillClaim: "Перенести в претензию",
+          rightsKicker: "ПРАВА ПАССАЖИРОВ",
+          rightsTitle: "10 типовых ситуаций на воздушном транспорте",
+          lawsKicker: "ЗАКОНОДАТЕЛЬНАЯ БАЗА РК",
+          lawsTitle: "Нормативные акты и справочные карточки",
+          lawsLead: "Сверяйте актуальные редакции на официальном портале ИПС «Әділет»",
+          docsKicker: "МОИ ДОКУМЕНТЫ",
+          docsTitle: "Генератор проекта претензии",
+          lblClaimTo: "Адресат",
+          lblClaimFrom: "Заявитель",
+          lblClaimText: "Текст претензии",
+          btnRegenClaim: "Обновить шаблон",
+          btnCopyClaim: "Копировать текст",
+          btnPrintClaim: "Печать / PDF",
+          boardKicker: "FLIGHT BOARD • ДЕМОНСТРАЦИЯ",
+          boardTitle: "Табло рейсов (демо-данные)",
+          thFlight: "Рейс",
+          thAirport: "Аэропорт",
+          thTime: "Время",
+          thStatus: "Статус",
+          thAction: "Действие",
+          btnCheck: "Проверить",
+          btnCheckDelay: "Разобрать задержку",
+          btnCheckCancel: "Разобрать отмену",
+          aboutKicker: "О ПРОЕКТЕ И FAQ",
+          aboutTitle: "Правовое предупреждение и частые вопросы",
+          aboutText: "VIALEX — информационно-образовательный LegalTech-проект для пассажиров воздушного транспорта Республики Казахстан. Материалы носят предварительный справочный характер и не заменяют индивидуальную юридическую консультацию.",
+          cardCta: "Разобрать в навигаторе →",
+          scenarioCta: "Открыть сценарий →",
+          lawCta: "Открыть ИПС «Әділет» ↗",
+          faq: [
+            {
+              q: "Какие документы важно сохранить при сбое рейса или проблемах с багажом?",
+              a: "Сохраняйте маршрутную квитанцию (электронный билет), посадочный талон, багажную бирку, отметки или уведомления перевозчика о задержке/отмене, чеки на вынужденные расходы (питание, вода, гостиница, трансфер), а также акт о неисправности при перевозке багажа (PIR) при повреждении или утрате."
+            },
+            {
+              q: "Зачем нужен предварительный отчёт и черновик претензии?",
+              a: "Они помогают систематизировать факты до обращения к авиаперевозчику, зафиксировать ключевые требования (возврат стоимости билета, перебронирование, предоставление услуг при ожидании рейса, возмещение подтверждённых убытков/расходов) и подготовить основу для письменной претензии."
+            },
+            {
+              q: "Как работает настройка цветов, темы и анимации полёта?",
+              a: "Кнопка «Цвета» в верхней панели открывает окно выбора светлой, тёмной или системной темы, готовых палитр и пользовательских цветов. Дополнительный и акцентный цвета сразу влияют на шлейф и искры самолёта, а настройки сохраняются в браузере."
+            }
+          ]
+        },
+        kz: {
+          introReplay: "✈ Ұшуды қайталау",
+          introEnter: "VIALEX-ке өту",
+          menuBtn: "☰ Мәзір",
+          navHome: "Басты бет",
+          navNavigator: "Навигатор",
+          navRights: "Құқықтар",
+          navLaws: "ҚР заңдары",
+          navClaim: "Шағым",
+          navBoard: "Табло",
+          navFaq: "FAQ",
+          colorsBtn: "Түстер",
+          flightBtn: "✈ Ұшу",
+          menuTitle: "📌 Бөлімдер мәзірі",
+          collapseBtn: "Жию",
+          expandBtn: "Ашу",
+          langLabel: "Тіл / Язык / Lang:",
+          m1: "1. Басты бет",
+          m2: "2. Құқықтық навигатор",
+          m3: "3. Жолаушылар құқықтары",
+          m4: "4. ҚР заңнамалық базасы",
+          m5: "5. Шағым генераторы",
+          m6: "6. Рейстер таблосы (демо)",
+          m7: "7. Жоба туралы және FAQ",
+          colorModalTitle: "Түс гаммасы және тақырып",
+          colorModalDesc: "Ресімдеу режимін, дайын палитраны немесе өз түстеріңізді таңдаңыз — қосымша және екпінді түстер ұшақ ізі мен ұшқындарды бірден бояйды, ал «ОК» батырмасы сақтап, терезені жабады.",
+          themeLight: "Жарық",
+          themeDark: "Қараңғы",
+          themeSystem: "Жүйелік",
+          palettesHeading: "Дайын палитралар",
+          customColorsHeading: "Өз түстеріңіз",
+          pickerPrimary: "Негізгі",
+          pickerSecondary: "Қосымша (із / ұшқындар)",
+          pickerAccent: "Екпінді (із / ұшқындар)",
+          pickerBg: "Фон",
+          resetBtn: "Қалпына келтіру",
+          okBtn: "ОК",
+          heroKicker: "ҚАЗАҚСТАН РЕСПУБЛИКАСЫ • LEGALTECH",
+          heroLead: "Қазақстандағы әуе жолаушысының білім беру цифрлық көмекшісі: рейс кешіккенде, тоқтатылғанда, кесте өзгергенде, отырғызудан бас тартылғанда, тоғыспалы рейске үлгермегенде және багаж мәселелерінде жағдайды талдау, алдын ала есеп және шағым жобасы.",
+          heroBtn1: "Құқықтық навигаторды ашу",
+          heroBtn2: "Шағымға өту",
+          navKicker: "ҚҰҚЫҚТЫҚ НАВИГАТОР",
+          navTitle: "Интерактивті заңгерлік калькулятор",
+          navLead: "Сценарийді таңдаңыз, белгілі деректерді толтырыңыз (міндетті емес өрістерді өткізіп жіберуге болады) және алдын ала есеп жасаңыз.",
+          lblScenario: "Жағдай",
+          opt1: "1. Рейстің кешігуі",
+          opt2: "2. Рейстің тоқтатылуы",
+          opt3: "3. Кестенің немесе маршруттың өзгеруі",
+          opt4: "4. Отырғызудан бас тарту",
+          opt5: "5. Тоғыспалы рейске үлгермеу",
+          opt6: "6. Багажбен байланысты мәселелер",
+          opt7: "7. Басқа жағдай",
+          lblDate: "Рейс / оқиға күні",
+          lblRoute: "Маршрут / рейс",
+          lblFacts: "Негізгі фактілер / тасымалдаушының әрекеті",
+          btnBuildReport: "Алдын ала есепті қалыптастыру",
+          btnFillClaim: "Шағымға көшіру",
+          rightsKicker: "ЖОЛАУШЫЛАР ҚҰҚЫҚТАРЫ",
+          rightsTitle: "Әуе көлігіндегі 10 типтік жағдай",
+          lawsKicker: "ҚР ЗАҢНАМАЛЫҚ БАЗАСЫ",
+          lawsTitle: "Нормативтік актілер және анықтамалық карточкалар",
+          lawsLead: "Өзекті редакцияларды «Әділет» АҚЖ ресми порталынан тексеріңіз",
+          docsKicker: "МЕНІҢ ҚҰЖАТТАРЫМ",
+          docsTitle: "Шағым жобасының генераторы",
+          lblClaimTo: "Алушы",
+          lblClaimFrom: "Өтініш беруші",
+          lblClaimText: "Шағым мәтіні",
+          btnRegenClaim: "Үлгіні жаңарту",
+          btnCopyClaim: "Мәтінді көшіру",
+          btnPrintClaim: "Басып шығару / PDF",
+          boardKicker: "FLIGHT BOARD • ДЕМОНСТРАЦИЯ",
+          boardTitle: "Рейстер таблосы (демо-деректер)",
+          thFlight: "Рейс",
+          thAirport: "Әуежай",
+          thTime: "Уақыты",
+          thStatus: "Мәртебесі",
+          thAction: "Әрекет",
+          btnCheck: "Тексеру",
+          btnCheckDelay: "Кешігуді талдау",
+          btnCheckCancel: "Тоқтатуды талдау",
+          aboutKicker: "ЖОБА ТУРАЛЫ ЖӘНЕ FAQ",
+          aboutTitle: "Құқықтық ескерту және жиі қойылатын сұрақтар",
+          aboutText: "VIALEX — Қазақстан Республикасы әуе көлігі жолаушыларына арналған ақпараттық-білім беру LegalTech-жобасы. Материалдар алдын ала анықтамалық сипатқа ие және жеке заңгерлік кеңесті алмастырмайды.",
+          cardCta: "Навигаторда талдау →",
+          scenarioCta: "Сценарийді ашу →",
+          lawCta: "«Әділет» АҚЖ ашу ↗",
+          faq: [
+            {
+              q: "Рейс бұзылғанда немесе багаж мәселесі туындағанда қандай құжаттарды сақтау маңызды?",
+              a: "Маршруттық түбіртекті (электрондық билет), отырғызу талонын, багаж биркасын, тасымалдаушының кешігу/тоқтату туралы белгілері мен хабарламаларын, мәжбүрлі шығындар чектерін (тамақ, су, қонақүй, трансфер), сондай-ақ багаж бүлінгенде немесе жоғалғанда PIR актісін сақтаңыз."
+            },
+            {
+              q: "Алдын ала есеп пен шағым жобасы не үшін қажет?",
+              a: "Олар әуе тасымалдаушыға жүгінбес бұрын фактілерді жүйелеуге, негізгі талаптарды (билет құнын қайтару, қайта брондау, күту кезіндегі қызметтер, расталған шығындарды өтеу) тіркеуге және жазбаша шағым негізін дайындауға көмектеседі."
+            },
+            {
+              q: "Түстерді, тақырыпты және ұшу анимациясын баптау қалай жұмыс істейді?",
+              a: "Жоғарғы панельдегі «Түстер» батырмасы жарық, қараңғы немесе жүйелік тақырыпты, дайын палитраларды және өз түстеріңізді таңдау терезесін ашады. Қосымша және екпінді түстер ұшақ ізі мен ұшқындарға бірден әсер етеді, ал баптаулар браузерде сақталады."
+            }
+          ]
+        },
+        en: {
+          introReplay: "✈ Replay Flight",
+          introEnter: "Enter VIALEX",
+          menuBtn: "☰ Menu",
+          navHome: "Home",
+          navNavigator: "Navigator",
+          navRights: "Rights",
+          navLaws: "RK Laws",
+          navClaim: "Claim",
+          navBoard: "Board",
+          navFaq: "FAQ",
+          colorsBtn: "Colors",
+          flightBtn: "✈ Flight",
+          menuTitle: "📌 Section Menu",
+          collapseBtn: "Collapse",
+          expandBtn: "Expand",
+          langLabel: "Language / Язык / Тіл:",
+          m1: "1. Home",
+          m2: "2. Legal Navigator",
+          m3: "3. Passenger Rights",
+          m4: "4. Kazakhstan Legislation",
+          m5: "5. Claim Generator",
+          m6: "6. Flight Board (Demo)",
+          m7: "7. About & FAQ",
+          colorModalTitle: "Color Palette & Theme",
+          colorModalDesc: "Choose an appearance mode, preset palette, or custom colors — secondary and accent colors immediately tint the airplane trail and sparks, and OK applies and closes the dialog.",
+          themeLight: "Light",
+          themeDark: "Dark",
+          themeSystem: "System",
+          palettesHeading: "Preset Palettes",
+          customColorsHeading: "Custom Colors",
+          pickerPrimary: "Primary",
+          pickerSecondary: "Secondary (trail / sparks)",
+          pickerAccent: "Accent (trail / sparks)",
+          pickerBg: "Background",
+          resetBtn: "Reset",
+          okBtn: "OK",
+          heroKicker: "REPUBLIC OF KAZAKHSTAN • LEGALTECH",
+          heroLead: "Educational digital assistant for air passengers in Kazakhstan: structured guidance for flight delays, cancellations, schedule changes, denied boarding, missed connections, and baggage issues, plus a preliminary legal report and claim draft.",
+          heroBtn1: "Open Legal Navigator",
+          heroBtn2: "Go to Claim Draft",
+          navKicker: "LEGAL NAVIGATOR",
+          navTitle: "Interactive Legal Calculator",
+          navLead: "Select a scenario, enter known details (optional fields can be skipped), and generate a preliminary report.",
+          lblScenario: "Scenario",
+          opt1: "1. Flight delay",
+          opt2: "2. Flight cancellation",
+          opt3: "3. Schedule or route change",
+          opt4: "4. Denied boarding",
+          opt5: "5. Missed connection",
+          opt6: "6. Baggage issues",
+          opt7: "7. Other situation",
+          lblDate: "Flight / event date",
+          lblRoute: "Route / flight number",
+          lblFacts: "Key facts / carrier response",
+          btnBuildReport: "Generate Preliminary Report",
+          btnFillClaim: "Transfer to Claim",
+          rightsKicker: "PASSENGER RIGHTS",
+          rightsTitle: "10 Common Air Travel Scenarios",
+          lawsKicker: "KAZAKHSTAN LEGISLATION",
+          lawsTitle: "Normative Acts & Reference Cards",
+          lawsLead: "Verify up-to-date official texts on the Adilet Legal Information System",
+          docsKicker: "MY DOCUMENTS",
+          docsTitle: "Claim Draft Generator",
+          lblClaimTo: "Recipient (Airline)",
+          lblClaimFrom: "Claimant",
+          lblClaimText: "Claim text",
+          btnRegenClaim: "Refresh Template",
+          btnCopyClaim: "Copy Text",
+          btnPrintClaim: "Print / PDF",
+          boardKicker: "FLIGHT BOARD • DEMO",
+          boardTitle: "Flight Board (Demo Data)",
+          thFlight: "Flight",
+          thAirport: "Airport",
+          thTime: "Time",
+          thStatus: "Status",
+          thAction: "Action",
+          btnCheck: "Inspect",
+          btnCheckDelay: "Analyze Delay",
+          btnCheckCancel: "Analyze Cancellation",
+          aboutKicker: "ABOUT & FAQ",
+          aboutTitle: "Legal Disclaimer & Frequently Asked Questions",
+          aboutText: "VIALEX is an informational and educational LegalTech project for air transport passengers in the Republic of Kazakhstan. Materials are for preliminary reference only and do not constitute formal legal advice.",
+          cardCta: "Analyze in Navigator →",
+          scenarioCta: "Open Scenario →",
+          lawCta: "Open Adilet Portal ↗",
+          faq: [
+            {
+              q: "Which documents should I keep during a flight disruption or baggage issue?",
+              a: "Keep your itinerary receipt (e-ticket), boarding pass, baggage tag, carrier notices or stamps confirming delay/cancellation, receipts for out-of-pocket expenses (meals, water, hotel, transfer), and a Property Irregularity Report (PIR) if baggage is delayed or damaged."
+            },
+            {
+              q: "Why generate a preliminary report and claim draft?",
+              a: "They help organize facts before contacting the airline, clearly state your requests (ticket refund, re-routing, care services during wait times, reimbursement of documented expenses), and prepare a structured written claim."
+            },
+            {
+              q: "How do theme, color palette, and flight animation settings work?",
+              a: "The Colors button in the top bar opens a dialog for Light, Dark, or System themes, preset palettes, and custom color pickers. Secondary and accent colors immediately update the plane's trail and sparks, and your settings are saved locally."
+            }
+          ]
+        }
+      };
+
+      const HERO_SITUATIONS = {
+        ru: [
+          { code: "01 • ЗАДЕРЖКА", title: "Задержка рейса", text: "Что положено пассажиру при ожидании вылета: информация, связь, напитки, питание, размещение и перебронирование.", scenario: "Задержка рейса" },
+          { code: "02 • ОТМЕНА", title: "Отмена рейса", text: "Право выбора между возвратом средств за неиспользованную перевозку и альтернативным перелётом до пункта назначения.", scenario: "Отмена рейса" },
+          { code: "03 • СТЫКОВКА / БАГАЖ", title: "Стыковка и багаж", text: "Действия при пропущенной стыковке по единому билету, задержке, повреждении или утрате багажа.", scenario: "Проблемы с багажом" },
+          { code: "04 • ПРЕТЕНЗИЯ", title: "Черновик претензии", text: "Быстрое формирование текста обращения к перевозчику с учётом даты, рейса и фактических обстоятельств.", scenario: "Другая ситуация" }
+        ],
+        kz: [
+          { code: "01 • КЕШІГУ", title: "Рейстің кешігуі", text: "Ұшуды күту кезінде жолаушыға тиесілі қызметтер: ақпарат, байланыс, сусындар, тамақ, қонақүй және қайта брондау.", scenario: "Задержка рейса" },
+          { code: "02 • ТОҚТАТУ", title: "Рейстің тоқтатылуы", text: "Орындалмаған тасымалдау үшін қаражатты қайтару немесе межелі пунктке баламалы ұшу арасында таңдау құқығы.", scenario: "Отмена рейса" },
+          { code: "03 • ТОҒЫСУ / БАГАЖ", title: "Тоғыспалы рейс және багаж", text: "Бірыңғай билет бойынша тоғыспалы рейске үлгермегенде, багаж кешіккенде, бүлінгенде немесе жоғалғанда жасалатын әрекеттер.", scenario: "Проблемы с багажом" },
+          { code: "04 • ШАҒЫМ", title: "Шағым жобасы", text: "Күнін, рейсті және нақты мән-жайларды ескере отырып тасымалдаушыға өтініш мәтінін жылдам құрастыру.", scenario: "Другая ситуация" }
+        ],
+        en: [
+          { code: "01 • DELAY", title: "Flight Delay", text: "What passengers are entitled to while waiting: information, communication, refreshments, meals, accommodation, and re-routing.", scenario: "Задержка рейса" },
+          { code: "02 • CANCELLATION", title: "Flight Cancellation", text: "Choice between a refund for the unused ticket and alternative transport to your final destination.", scenario: "Отмена рейса" },
+          { code: "03 • CONNECTION / BAGGAGE", title: "Connections & Baggage", text: "Steps to take for missed single-ticket connections, delayed, damaged, or lost baggage.", scenario: "Проблемы с багажом" },
+          { code: "04 • CLAIM", title: "Claim Draft", text: "Quickly build a structured claim letter to the airline incorporating flight date, route, and facts.", scenario: "Другая ситуация" }
+        ]
+      };
+
+      const RIGHTS_ITEMS = {
+        ru: [
+          { num: "Ситуация 01", title: "Задержка рейса по вине перевозчика или иным причинам", desc: "Фиксация статуса рейса, запрос информации о причинах и новом времени вылета, получение положенных услуг при длительном ожидании и учёт вынужденных расходов.", scenario: "Задержка рейса" },
+          { num: "Ситуация 02", title: "Отмена регулярного или чартерного рейса", desc: "Выбор между полным возвратом стоимости билета / невыполненного участка и отправкой ближайшим доступным рейсом, а также содействие при ожидании.", scenario: "Отмена рейса" },
+          { num: "Ситуация 03", title: "Изменение расписания или маршрута", desc: "Перенос времени вылета/прилёта или изменение маршрута: оценка существенности изменений, согласование нового варианта либо возврат средств.", scenario: "Изменение расписания или маршрута" },
+          { num: "Ситуация 04", title: "Отказ в посадке при наличии подтверждённого билета", desc: "Выяснение оснований отказа (включая овербукинг), получение письменного подтверждения причины и требований по отправке или возврату.", scenario: "Отказ в посадке" },
+          { num: "Ситуация 05", title: "Пропущенная стыковка по единому бронированию", desc: "Если опоздание на стыковочный рейс произошло из-за сбоя на предыдущем плече единого билета, перевозчик организует дальнейшую перевозку.", scenario: "Пропущенная стыковка" },
+          { num: "Ситуация 06", title: "Утрата или длительная задержка багажа", desc: "Оформление акта о неисправности при перевозке багажа (PIR) до выхода из зоны выдачи, сохранение багажной бирки и фиксация расходов на предметы первой необходимости.", scenario: "Проблемы с багажом" },
+          { num: "Ситуация 07", title: "Повреждение багажа во время перевозки", desc: "Фото- и видеофиксация дефектов, составление акта в аэропорту, оценка стоимости ремонта или утраты и подача письменной претензии перевозчику.", scenario: "Проблемы с багажом" },
+          { num: "Ситуация 08", title: "Вынужденные расходы на питание и гостиницу", desc: "Сохранение фискальных чеков и счетов на воду, горячее питание, размещение и трансфер при задержке или отмене рейса.", scenario: "Задержка рейса" },
+          { num: "Ситуация 09", title: "Изменение класса обслуживания на борту", desc: "Фиксация факта перевода в более низкий класс обслуживания и проверка права на возврат разницы в тарифе.", scenario: "Изменение расписания или маршрута" },
+          { num: "Ситуация 10", title: "Досудебная претензия и фиксация доказательств", desc: "Подготовка структурированного обращения к авиаперевозчику с приложением билетов, посадочных талонов, переписки и платёжных документов.", scenario: "Другая ситуация" }
+        ],
+        kz: [
+          { num: "01-жағдай", title: "Тасымалдаушы кінәсінен немесе өзге себептермен рейстің кешігуі", desc: "Рейс мәртебесін тіркеу, кешігу себептері мен жаңа ұшу уақыты туралы ақпарат сұрату, ұзақ күту кезінде тиесілі қызметтерді алу.", scenario: "Задержка рейса" },
+          { num: "02-жағдай", title: "Тұрақты немесе чартерлік рейстің тоқтатылуы", desc: "Билет құнын толық қайтару немесе жақын арадағы қолжетімді рейспен жөнелту арасында таңдау жасау.", scenario: "Отмена рейса" },
+          { num: "03-жағдай", title: "Кестенің немесе маршруттың өзгеруі", desc: "Ұшу/қону уақытының ауысуы: өзгерістердің елеулілігін бағалау, жаңа нұсқаны келісу немесе қаражатты қайтару.", scenario: "Изменение расписания или маршрута" },
+          { num: "04-жағдай", title: "Расталған билет болған кезде отырғызудан бас тарту", desc: "Бас тарту негіздерін анықтау (овербукингті қоса алғанда), себебін жазбаша растауды алу.", scenario: "Отказ в посадке" },
+          { num: "05-жағдай", title: "Бірыңғай брондау бойынша тоғыспалы рейске үлгермеу", desc: "Бірыңғай билеттің алдыңғы сегменті кешігуінен тоғыспалы рейске үлгермесеңіз, тасымалдаушы әрі қарай тасымалдауды ұйымдастырады.", scenario: "Пропущенная стыковка" },
+          { num: "06-жағдай", title: "Багаждың жоғалуы немесе ұзақ кешігуі", desc: "Багаж беру аймағынан шықпай тұрып PIR актісін ресімдеу, багаж биркасын және қажетті заттар чектерін сақтау.", scenario: "Проблемы с багажом" },
+          { num: "07-жағдай", title: "Тасымалдау кезінде багаждың бүлінуі", desc: "Ақауларды фото/видеоға түсіру, әуежайда акт жасау және тасымалдаушыға жазбаша шағым беру.", scenario: "Проблемы с багажом" },
+          { num: "08-жағдай", title: "Тамақтану мен қонақүйге жұмсалған мәжбүрлі шығындар", desc: "Рейс кешіккенде немесе тоқтатылғанда су, ыстық тамақ, тұру және трансфер чектерін сақтау.", scenario: "Задержка рейса" },
+          { num: "09-жағдай", title: "Бортта қызмет көрсету класының өзгеруі", desc: "Төменірек қызмет көрсету класына ауыстыру фактісін тіркеу және тариф айырмасын қайтару құқығын тексеру.", scenario: "Изменение расписания или маршрута" },
+          { num: "10-жағдай", title: "Сотқа дейінгі шағым және дәлелдемелерді тіркеу", desc: "Билеттерді, отырғызу талондарын, хат алмасуды және төлем құжаттарын қоса бере отырып өтініш дайындау.", scenario: "Другая ситуация" }
+        ],
+        en: [
+          { num: "Scenario 01", title: "Flight delay caused by carrier or other factors", desc: "Document flight status, request updates on causes and departure time, obtain care services during extended waits, and keep expense receipts.", scenario: "Задержка рейса" },
+          { num: "Scenario 02", title: "Cancellation of a scheduled or charter flight", desc: "Choose between a full refund for the unused segment or re-routing on the next available flight, plus care assistance.", scenario: "Отмена рейса" },
+          { num: "Scenario 03", title: "Schedule or route modification", desc: "Evaluate significant departure/arrival shifts and either accept a revised itinerary or claim a ticket refund.", scenario: "Изменение расписания или маршрута" },
+          { num: "Scenario 04", title: "Denied boarding with a confirmed reservation", desc: "Request written confirmation of the reason (including overbooking) and arrange re-routing or refund.", scenario: "Отказ в посадке" },
+          { num: "Scenario 05", title: "Missed connection on a single booking", desc: "When a delay on the first leg of a single ticket causes a missed connection, the carrier arranges onward transport.", scenario: "Пропущенная стыковка" },
+          { num: "Scenario 06", title: "Lost or severely delayed baggage", desc: "File a Property Irregularity Report (PIR) before leaving the baggage claim area and keep baggage tags and essential purchase receipts.", scenario: "Проблемы с багажом" },
+          { num: "Scenario 07", title: "Baggage damaged during carriage", desc: "Photograph damage immediately, file an airport report, document repair/replacement value, and submit a written claim.", scenario: "Проблемы с багажом" },
+          { num: "Scenario 08", title: "Out-of-pocket meal and hotel expenses", desc: "Keep itemized receipts for water, hot meals, accommodation, and transfers incurred during delays or cancellations.", scenario: "Задержка рейса" },
+          { num: "Scenario 09", title: "Cabin class downgrade", desc: "Document involuntary downgrade to a lower cabin class and request reimbursement of the fare difference.", scenario: "Изменение расписания или маршрута" },
+          { num: "Scenario 10", title: "Pre-trial claim & evidence preservation", desc: "Compile a structured written claim supported by tickets, boarding passes, carrier notices, and receipts.", scenario: "Другая ситуация" }
+        ]
+      };
+
+      const LAWS_ITEMS = {
+        ru: [
+          {
+            tag: "ЗАКОН РК • СТ. 86",
+            title: "Закон РК «Об использовании воздушного пространства РК и деятельности авиации» — Статья 86 (и смежные нормы гл. 13)",
+            summary: "Простыми словами — что положено при задержке или отмене рейса: 2 звонка/e-mail и напитки при задержке >2 ч, горячее питание >4 ч, гостиница и трансфер при длительном ожидании, либо возврат полной стоимости билета / отправка ближайшим рейсом.",
+            url: "https://adilet.zan.kz/"
+          },
+          {
+            tag: "ПРАВИЛА ПЕРЕВОЗОК • КЛЮЧЕВЫЕ РАЗДЕЛЫ",
+            title: "Правила перевозок пассажиров, багажа и грузов на воздушном транспорте",
+            summary: "Простыми словами — практическая инструкция в аэропорту: как оформляется билет и багажная бирка, когда выдают напитки/питание/гостиницу, как оформляется акт о неисправности багажа (PIR) при потере или повреждении чемодана и как подать обращение.",
+            url: "https://adilet.zan.kz/"
+          },
+          {
+            tag: "ГК РК • СТ. 688–702",
+            title: "Гражданский кодекс РК (Особенная часть, гл. 34 — «Перевозка», в т.ч. ст. 690, 697–702)",
+            summary: "Простыми словами — билет и багажный талон подтверждают договор перевозки. Помогает понять, когда перевозчик отвечает за задержку отправления, несохранность/утрату багажа и возмещение подтверждённых убытков.",
+            url: "https://adilet.zan.kz/"
+          },
+          {
+            tag: "ЗАЩИТА ПРАВ ПОТРЕБИТЕЛЕЙ",
+            title: "Закон РК «О защите прав потребителей» (право на информацию и претензионный порядок)",
+            summary: "Простыми словами — общее правило: вам обязаны давать достоверную информацию об услуге, а при нарушении прав можно направить письменную претензию и добиваться защиты своих интересов.",
+            url: "https://adilet.zan.kz/"
+          }
+        ],
+        kz: [
+          {
+            tag: "ҚР ЗАҢЫ • 86-БАП",
+            title: "«ҚР әуе кеңістігін пайдалану және авиация қызметі туралы» ҚР Заңы — 86-бап",
+            summary: "Қарапайым тілмен — рейс кешіккенде немесе тоқтатылғанда не тиесілі: 2 сағаттан асса — 2 қоңырау/e-mail және сусындар, 4 сағаттан асса — ыстық тамақ, ұзақ күтуде — қонақүй мен трансфер, не болмаса билет ақшасын толық қайтару / жақын рейспен жөнелту.",
+            url: "https://adilet.zan.kz/"
+          },
+          {
+            tag: "ТАСЫМАЛДАУ ҚАҒИДАЛАРЫ",
+            title: "Әуе көлігімен жолаушыларды, багажды және жүктерді тасымалдау қағидалары",
+            summary: "Қарапайым тілмен — әуежайдағы нақты тәртіп: билет пен багаж биркасы қалай беріледі, күту кезінде қызметтер қалай көрсетіледі, багаж жоғалса немесе бүлінсе PIR актісі қалай толтырылады.",
+            url: "https://adilet.zan.kz/"
+          },
+          {
+            tag: "АК РК • 688–702-БАПТАР",
+            title: "ҚР Азаматтық кодексі (Ерекше бөлім, 34-тарау — «Тасымалдау», 690, 697–702-баптар)",
+            summary: "Қарапайым тілмен — билет пен багаж түбіртегі тасымалдау шартын растайды; рейс кешіккенде, багаж жоғалғанда немесе бүлінгенде тасымалдаушының жауапкершілігі мен шығынды өтеу негіздерін көрсетеді.",
+            url: "https://adilet.zan.kz/"
+          },
+          {
+            tag: "ТҰТЫНУШЫЛАР ҚҰҚЫҒЫ",
+            title: "«Тұтынушылардың құқықтарын қорғау туралы» ҚР Заңы",
+            summary: "Қарапайым тілмен — қызмет туралы нақты ақпарат алу құқығы және құқығыңыз бұзылған жағдайда жазбаша шағым беру тәртібі.",
+            url: "https://adilet.zan.kz/"
+          }
+        ],
+        en: [
+          {
+            tag: "RK LAW • ART. 86",
+            title: "RK Law on Use of Airspace & Aviation Activities — Article 86 (and Ch. 13)",
+            summary: "In plain terms — passenger care on delay/cancellation: 2 calls/emails and drinks after >2h, hot meals after >4h, hotel and transfer on extended waits, or full ticket refund / next available flight.",
+            url: "https://adilet.zan.kz/"
+          },
+          {
+            tag: "CARRIAGE RULES • KEY SECTIONS",
+            title: "Rules for Air Carriage of Passengers, Baggage, and Cargo",
+            summary: "In plain terms — airport practicalities: ticketing and baggage tags, care services during delays, filing a Property Irregularity Report (PIR) for lost/damaged bags, and submitting requests.",
+            url: "https://adilet.zan.kz/"
+          },
+          {
+            tag: "CIVIL CODE • ARTS. 688–702",
+            title: "Civil Code of RK (Special Part, Ch. 34 — Carriage, incl. Arts. 690, 697–702)",
+            summary: "In plain terms — your ticket and baggage receipt evidence the carriage contract and set out carrier responsibility for flight delays, baggage loss/damage, and documented losses.",
+            url: "https://adilet.zan.kz/"
+          },
+          {
+            tag: "CONSUMER PROTECTION",
+            title: "RK Law on Protection of Consumer Rights",
+            summary: "In plain terms — your right to accurate service information and structured pre-trial complaints when passenger rights are violated.",
+            url: "https://adilet.zan.kz/"
+          }
+        ]
+      };
+
+      const SCENARIO_GUIDES = {
+        "Задержка рейса": {
+          summary: "При задержке рейса важно зафиксировать фактическое время вылета, получить актуальную информацию от авиакомпании и контролировать предоставление базовых услуг при ожидании.",
+          steps: [
+            "Сделайте фото/скриншот табло или уведомления перевозчика о задержке с указанием времени и причины.",
+            "Обратитесь на стойку авиакомпании или в колл-центр для уточнения прогноза вылета и получения услуг ожидания (напитки, питание, связь, гостиница при длительной задержке).",
+            "Сохраняйте все чеки на вынужденные расходы и посадочные талоны / маршрутную квитанцию."
+          ],
+          claimFocus: "предоставления сведений о задержке, обеспечения положенными услугами во время ожидания и возмещения подтверждённых вынужденных расходов."
+        },
+        "Отмена рейса": {
+          summary: "При отмене рейса ключевой шаг — письменно или через официальный канал зафиксировать отмену и выбрать подходящий вариант: возврат средств или альтернативную перевозку.",
+          steps: [
+            "Получите уведомление об отмене рейса или зафиксируйте статус в системе бронирования.",
+            "Выберите между возвратом стоимости билета / невыполненного участка и перебронированием на другой рейс до пункта назначения.",
+            "При необходимости ожидания следующего рейса уточните у перевозчика порядок размещения и питания и сохраните чеки."
+          ],
+          claimFocus: "возврата уплаченных сумм за невыполненную перевозку либо обеспечения альтернативного перелёта и возмещения сопутствующих расходов."
+        },
+        "Изменение расписания или маршрута": {
+          summary: "Если перевозчик существенно изменил время вылета, прилёта или маршрут, оцените, подходит ли новый вариант, и зафиксируйте своё решение до начала перевозки.",
+          steps: [
+            "Сравните исходное расписание/маршрут с предложенным изменением и сохраните уведомление авиакомпании.",
+            "Свяжитесь с перевозчиком для согласования альтернативного рейса или оформления возврата средств при несогласии с изменениями.",
+            "Сохраните переписку и подтверждение статуса билета."
+          ],
+          claimFocus: "урегулирования последствий изменения расписания или маршрута, возврата средств либо перебронирования."
+        },
+        "Отказ в посадке": {
+          summary: "При отказе в посадке при оформленном билете и своевременном прохождении процедур важно запросить официальное объяснение причины и зафиксировать дальнейшие действия перевозчика.",
+          steps: [
+            "Попросите представителя авиакомпании указать причину отказа в посадке и зафиксировать её в письменном виде или отметке на документе.",
+            "Уточните порядок отправки ближайшим рейсом или возврата стоимости билета.",
+            "Сохраните посадочный талон/бронь, переписку и чеки на вынужденные расходы."
+          ],
+          claimFocus: "разъяснения причин отказа в посадке, обеспечения перевозки или возврата средств и возмещения подтверждённых расходов."
+        },
+        "Пропущенная стыковка": {
+          summary: "При пропущенной стыковке первостепенное значение имеет то, оформлены ли рейсы на едином билете / едином бронировании и по какой причине произошёл сбой.",
+          steps: [
+            "Проверьте маршрутную квитанцию: указаны ли сегменты в едином документе перевозки.",
+            "Незамедлительно обратитесь к представителю перевозчика в аэропорту стыковки для переоформления следующего сегмента.",
+            "Сохраните документы о задержке первого рейса и все чеки на вынужденное ожидание."
+          ],
+          claimFocus: "организации дальнейшей перевозки по маршруту при пропущенной стыковке и возмещения расходов, возникших в связи со сбоем."
+        },
+        "Проблемы с багажом": {
+          summary: "При задержке, повреждении или утрате багажа действовать нужно оперативно — по возможности ещё в аэропорту прилёта до выхода из зоны контроля/выдачи.",
+          steps: [
+            "Обратитесь на стойку розыска багажа / к представителю перевозчика и оформите акт о неисправности при перевозке багажа (PIR).",
+            "Сделайте чёткие фото повреждений (или зафиксируйте факт неприбытия багажа) и сохраните багажную бирку и посадочный талон.",
+            "Сохраняйте чеки на необходимые вещи и документы, подтверждающие стоимость багажа/ремонта."
+          ],
+          claimFocus: "розыска багажа, возмещения ущерба при его повреждении или утрате и компенсации обоснованных расходов."
+        },
+        "Другая ситуация": {
+          summary: "Соберите хронологию событий, платёжные и перевозочные документы и сформулируйте конкретное требование в адрес авиаперевозчика.",
+          steps: [
+            "Запишите точные даты, время, номера рейсов и имена/должности сотрудников, с которыми общались.",
+            "Подготовьте копии билета, посадочного талона, уведомлений перевозчика и платёжных документов.",
+            "Направьте письменную претензию перевозчику через официальный канал и сохраните подтверждение отправки."
+          ],
+          claimFocus: "рассмотрения обстоятельств перевозки и удовлетворения заявленных требований пассажира."
+        }
+      };
+
+      function hexToRgba(hex, alpha) {
+        const clean = String(hex || "").replace("#", "").trim();
+        if (clean.length !== 6) return `rgba(173, 184, 134, ${alpha})`;
+        const r = parseInt(clean.slice(0, 2), 16);
+        const g = parseInt(clean.slice(2, 4), 16);
+        const b = parseInt(clean.slice(4, 6), 16);
+        return `rgba(${r}, ${g}, ${b}, ${alpha})`;
+      }
+
+      function resolveScheme(mode) {
+        if (mode === "dark" || mode === "light") return mode;
+        return window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
+      }
+
+      function applyThemeAndColors() {
+        const activeScheme = resolveScheme(appState.mode);
+        document.documentElement.setAttribute("data-scheme", activeScheme);
+
+        const root = document.documentElement;
+        root.style.setProperty("--primary", appState.primary);
+        root.style.setProperty("--secondary", appState.secondary);
+        root.style.setProperty("--accent", appState.accent);
+
+        if (appState.bg) {
+          root.style.setProperty("--bg", appState.bg);
+        } else {
+          root.style.setProperty("--bg", activeScheme === "dark" ? "#140F13" : "#F5F1E8");
+        }
+
+        document.querySelectorAll("[data-scheme-choice]").forEach((btn) => {
+          btn.classList.toggle("active", btn.getAttribute("data-scheme-choice") === appState.mode);
+        });
+      }
+
+      function applyLanguage() {
+        const lang = I18N[appState.lang] ? appState.lang : "ru";
+        const dict = I18N[lang];
+        document.documentElement.lang = lang === "kz" ? "kk" : lang;
+
+        document.querySelectorAll("[data-lang-choice]").forEach((btn) => {
+          btn.classList.toggle("active", btn.getAttribute("data-lang-choice") === lang);
+        });
+
+        document.querySelectorAll("[data-i18n]").forEach((el) => {
+          const key = el.getAttribute("data-i18n");
+          if (dict[key]) {
+            el.textContent = dict[key];
+          }
+        });
+
+        const isCollapsed = menuPopover.classList.contains("collapsed");
+        toggleMenuCollapseBtn.textContent = isCollapsed ? dict.expandBtn : dict.collapseBtn;
+
+        renderCards();
+        renderFaq();
+      }
+
+      function syncInputsFromState() {
+        document.getElementById("colorPrimary").value = appState.primary;
+        document.getElementById("colorSecondary").value = appState.secondary;
+        document.getElementById("colorAccent").value = appState.accent;
+        document.getElementById("colorBg").value = appState.bg;
+      }
+
+      function savePrefs() {
+        try {
+          localStorage.setItem(STORAGE_KEY, JSON.stringify(appState));
+        } catch (_) {}
+      }
+
+      function loadPrefs() {
+        try {
+          const raw = localStorage.getItem(STORAGE_KEY);
+          if (!raw) return;
+          const parsed = JSON.parse(raw);
+          if (parsed && typeof parsed === "object") {
+            if (["ru", "kz", "en"].includes(parsed.lang)) appState.lang = parsed.lang;
+            if (["light", "dark", "system"].includes(parsed.mode)) appState.mode = parsed.mode;
+            if (/^#[0-9a-fA-F]{6}$/.test(parsed.primary)) appState.primary = parsed.primary;
+            if (/^#[0-9a-fA-F]{6}$/.test(parsed.secondary)) appState.secondary = parsed.secondary;
+            if (/^#[0-9a-fA-F]{6}$/.test(parsed.accent)) appState.accent = parsed.accent;
+            if (/^#[0-9a-fA-F]{6}$/.test(parsed.bg)) appState.bg = parsed.bg;
+          }
+        } catch (_) {}
+      }
+
+      function renderPalettes() {
+        const list = document.getElementById("paletteList");
+        list.innerHTML = "";
+        PALETTES.forEach((pal) => {
+          const btn = document.createElement("button");
+          btn.type = "button";
+          btn.className = "palette-chip";
+          btn.innerHTML = `
+            <span class="swatch" style="background:${pal.primary}"></span>
+            <span class="swatch" style="background:${pal.secondary}"></span>
+            <span class="swatch" style="background:${pal.accent}"></span>
+            <span>${pal.name}</span>
+          `;
+          btn.addEventListener("click", () => {
+            const scheme = resolveScheme(appState.mode);
+            appState.primary = pal.primary;
+            appState.secondary = pal.secondary;
+            appState.accent = pal.accent;
+            appState.bg = scheme === "dark" ? pal.bgDark : pal.bgLight;
+            syncInputsFromState();
+            applyThemeAndColors();
+            addSparks(viewW * 0.5, viewH * 0.45, 22);
+          });
+          list.appendChild(btn);
+        });
+      }
+
+      let dpr = Math.min(window.devicePixelRatio || 1, 2);
+      let viewW = window.innerWidth;
+      let viewH = window.innerHeight;
+
+      function resizeCanvas() {
+        viewW = window.innerWidth;
+        viewH = window.innerHeight;
+        dpr = Math.min(window.devicePixelRatio || 1, 2);
+        canvas.width = Math.round(viewW * dpr);
+        canvas.height = Math.round(viewH * dpr);
+        ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+      }
+      resizeCanvas();
+      window.addEventListener("resize", resizeCanvas);
+
+      // 4-ENGINE TOP-DOWN AIRPLANE SILHOUETTE (MATCHING USER REFERENCE IMAGE)
+      let planeFlight = null;
+      const sparks = [];
+
+      function startLeftToRightFlight(revealTitleAndPhrase) {
+        canvas.classList.add("active");
+        if (revealTitleAndPhrase) {
+          document.body.classList.add("intro-active");
+          introStage.classList.remove("hidden");
+          introActions.classList.remove("ready");
+          revealBox.style.setProperty("--reveal-pct", "0%");
+        }
+        planeFlight = {
+          startTime: performance.now(),
+          duration: 1850,
+          reveal: Boolean(revealTitleAndPhrase),
+          trail: []
+        };
+      }
+
+      // Top-down 4-engine airliner rotated +90deg so nose points right (along left->right trajectory)
+      function drawFourEngineTopDownPlane(x, y) {
+        const s = Math.min(Math.max(viewW / 950, 0.72), 1.32);
+        ctx.save();
+        ctx.translate(x, y);
+        ctx.rotate(Math.PI / 2); // Orient nose to the right (+X)
+        ctx.scale(s, s);
+
+        // Soft aura behind plane
+        const auraGrad = ctx.createRadialGradient(0, 0, 6, 0, 0, 68);
+        auraGrad.addColorStop(0, hexToRgba(appState.secondary, 0.42));
+        auraGrad.addColorStop(0.65, hexToRgba(appState.accent, 0.18));
+        auraGrad.addColorStop(1, "rgba(0, 0, 0, 0)");
+        ctx.fillStyle = auraGrad;
+        ctx.beginPath();
+        ctx.arc(0, 0, 68, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Subtle drop shadow
+        ctx.save();
+        ctx.translate(-8, 10);
+        ctx.fillStyle = "rgba(0, 0, 0, 0.25)";
+        drawAirlinerSilhouettePath();
+        ctx.fill();
+        ctx.restore();
+
+        // Main silhouette fill with subtle 3D metallic sheen
+        const bodyGrad = ctx.createLinearGradient(-64, -56, 64, 56);
+        bodyGrad.addColorStop(0, "#343235");
+        bodyGrad.addColorStop(0.5, "#232124");
+        bodyGrad.addColorStop(1, "#3A373B");
+
+        ctx.fillStyle = bodyGrad;
+        drawAirlinerSilhouettePath();
+        ctx.fill();
+
+        // Thin rim highlight in user's secondary color
+        ctx.strokeStyle = hexToRgba(appState.secondary, 0.85);
+        ctx.lineWidth = 1.4;
+        ctx.stroke();
+
+        ctx.restore();
+      }
+
+      // Exact top-down 4-engine commercial airliner path (nose up at y=-56, tail down at y=+56)
+      function drawAirlinerSilhouettePath() {
+        ctx.beginPath();
+        // Nose tip & right fuselage forward
+        ctx.moveTo(0, -56);
+        ctx.bezierCurveTo(6.5, -56, 8.8, -44, 8.8, -24);
+
+        // Right wing leading edge + 2 right engine nacelles
+        ctx.lineTo(17, -19.5);
+        ctx.lineTo(17, -25.5);
+        ctx.lineTo(28.5, -25.5);
+        ctx.lineTo(28.5, -14.5);
+
+        ctx.lineTo(36, -11);
+        ctx.lineTo(36, -16.5);
+        ctx.lineTo(47, -16.5);
+        ctx.lineTo(47, -6);
+
+        // Right wingtip & trailing edge
+        ctx.lineTo(76, 6);
+        ctx.lineTo(76, 11.5);
+        ctx.lineTo(8.5, 2.5);
+
+        // Right aft fuselage & horizontal stabilizer
+        ctx.lineTo(4.6, 36.5);
+        ctx.lineTo(20, 44.5);
+        ctx.lineTo(20, 51.5);
+        ctx.lineTo(2.4, 48.2);
+
+        // Tail cone tip
+        ctx.lineTo(0, 56);
+
+        // Left horizontal stabilizer & aft fuselage
+        ctx.lineTo(-2.4, 48.2);
+        ctx.lineTo(-20, 51.5);
+        ctx.lineTo(-20, 44.5);
+        ctx.lineTo(-4.6, 36.5);
+
+        // Left wing trailing edge & wingtip
+        ctx.lineTo(-8.5, 2.5);
+        ctx.lineTo(-76, 11.5);
+        ctx.lineTo(-76, 6);
+
+        // Left wing leading edge + 2 left engine nacelles
+        ctx.lineTo(-47, -6);
+        ctx.lineTo(-47, -16.5);
+        ctx.lineTo(-36, -16.5);
+        ctx.lineTo(-36, -11);
+
+        ctx.lineTo(-28.5, -14.5);
+        ctx.lineTo(-28.5, -25.5);
+        ctx.lineTo(-17, -25.5);
+        ctx.lineTo(-17, -19.5);
+
+        // Left fuselage forward back to nose
+        ctx.lineTo(-8.8, -24);
+        ctx.bezierCurveTo(-8.8, -44, -6.5, -56, 0, -56);
+        ctx.closePath();
+      }
+
+      function addSparks(x, y, count) {
+        canvas.classList.add("active");
+        for (let i = 0; i < count; i++) {
+          const a = Math.random() * Math.PI * 2;
+          const speed = 1.2 + Math.random() * 4.5;
+          const useAccent = Math.random() > 0.45;
+          sparks.push({
+            x,
+            y,
+            vx: Math.cos(a) * speed - 1.2,
+            vy: Math.sin(a) * speed,
+            life: 1,
+            decay: 0.02 + Math.random() * 0.028,
+            size: 1.8 + Math.random() * 2.8,
+            color: useAccent ? appState.accent : appState.secondary
+          });
+        }
+      }
+
+      function drawTrail(trail) {
+        if (trail.length < 2) return;
+        for (let i = 1; i < trail.length; i++) {
+          const p0 = trail[i - 1];
+          const p1 = trail[i];
+          const ratio = i / trail.length;
+          ctx.strokeStyle = i % 2 === 0
+            ? hexToRgba(appState.secondary, ratio * 0.55)
+            : hexToRgba(appState.accent, ratio * 0.55);
+          ctx.lineWidth = Math.max(1.2, ratio * 6.5);
+          ctx.lineCap = "round";
+          ctx.beginPath();
+          ctx.moveTo(p0.x, p0.y);
+          ctx.lineTo(p1.x, p1.y);
+          ctx.stroke();
+        }
+      }
+
+      function animateFrame(now) {
+        ctx.clearRect(0, 0, viewW, viewH);
+
+        if (planeFlight) {
+          const elapsed = now - planeFlight.startTime;
+          const rawT = Math.min(Math.max(elapsed / planeFlight.duration, 0), 1);
+          const eased = rawT < 0.5 ? 2 * rawT * rawT : 1 - Math.pow(-2 * rawT + 2, 2) / 2;
+
+          const startX = -95;
+          const endX = viewW + 115;
+          const planeX = startX + (endX - startX) * eased;
+          const planeY = viewH * 0.44;
+
+          planeFlight.trail.push({ x: planeX - 46, y: planeY });
+          if (planeFlight.trail.length > 36) {
+            planeFlight.trail.shift();
+          }
+
+          if (Math.random() < 0.85) {
+            addSparks(planeX - 54, planeY, 3);
+          }
+
+          if (planeFlight.reveal) {
+            const boxRect = revealBox.getBoundingClientRect();
+            const relProgress = boxRect.width > 0
+              ? ((planeX - boxRect.left) / boxRect.width) * 100
+              : eased * 100;
+            const clampedPct = Math.max(0, Math.min(100, relProgress));
+            revealBox.style.setProperty("--reveal-pct", `${clampedPct}%`);
+          }
+
+          drawTrail(planeFlight.trail);
+          drawFourEngineTopDownPlane(planeX, planeY);
+
+          if (rawT >= 1) {
+            if (planeFlight.reveal) {
+              revealBox.style.setProperty("--reveal-pct", "100%");
+              introActions.classList.add("ready");
+            }
+            planeFlight = null;
+          }
+        }
+
+        for (let i = sparks.length - 1; i >= 0; i--) {
+          const sp = sparks[i];
+          sp.x += sp.vx;
+          sp.y += sp.vy;
+          sp.vy += 0.04;
+          sp.vx *= 0.98;
+          sp.life -= sp.decay;
+
+          if (sp.life <= 0) {
+            sparks.splice(i, 1);
+            continue;
+          }
+
+          ctx.save();
+          ctx.globalAlpha = Math.max(0, sp.life);
+          ctx.fillStyle = sp.color;
+          ctx.beginPath();
+          ctx.arc(sp.x, sp.y, sp.size * sp.life, 0, Math.PI * 2);
+          ctx.fill();
+          ctx.restore();
+        }
+
+        if (!planeFlight && sparks.length === 0) {
+          canvas.classList.remove("active");
+        }
+
+        requestAnimationFrame(animateFrame);
+      }
+
+      // Render dynamic cards & FAQ for current language
+      function renderCards() {
+        const lang = I18N[appState.lang] ? appState.lang : "ru";
+        const dict = I18N[lang];
+
+        const heroGrid = document.getElementById("heroSituations");
+        heroGrid.innerHTML = HERO_SITUATIONS[lang].map((item) => `
+          <article class="card">
+            <div>
+              <div class="card-num">${item.code}</div>
+              <h3 class="card-title">${item.title}</h3>
+              <p class="card-text">${item.text}</p>
+            </div>
+            <button type="button" class="card-link" data-jump-scenario="${item.scenario}">${dict.cardCta}</button>
+          </article>
+        `).join("");
+
+        const rightsGrid = document.getElementById("rightsGrid");
+        rightsGrid.innerHTML = RIGHTS_ITEMS[lang].map((item) => `
+          <article class="card">
+            <div>
+              <div class="card-num">${item.num}</div>
+              <h3 class="card-title">${item.title}</h3>
+              <p class="card-text">${item.desc}</p>
+            </div>
+            <button type="button" class="card-link" data-jump-scenario="${item.scenario}">${dict.scenarioCta}</button>
+          </article>
+        `).join("");
+
+        const lawsGrid = document.getElementById("lawsGrid");
+        lawsGrid.innerHTML = LAWS_ITEMS[lang].map((law) => `
+          <article class="card">
+            <div>
+              <div class="card-num">${law.tag}</div>
+              <h3 class="card-title">${law.title}</h3>
+              <p class="card-text">${law.summary}</p>
+            </div>
+            <a href="${law.url}" target="_blank" rel="noopener noreferrer" class="card-link">${dict.lawCta}</a>
+          </article>
+        `).join("");
+      }
+
+      function renderFaq() {
+        const lang = I18N[appState.lang] ? appState.lang : "ru";
+        const faqList = document.getElementById("faqList");
+        faqList.innerHTML = I18N[lang].faq.map((item) => `
+          <details class="faq-item">
+            <summary>${item.q}</summary>
+            <p>${item.a}</p>
+          </details>
+        `).join("");
+      }
+
+      // Report & Claim generator
+      function buildReportData() {
+        const scenario = document.getElementById("calcScenario").value;
+        const dateVal = document.getElementById("calcDate").value;
+        const routeVal = document.getElementById("calcRoute").value.trim();
+        const factsVal = document.getElementById("calcFacts").value.trim();
+        const guide = SCENARIO_GUIDES[scenario] || SCENARIO_GUIDES["Другая ситуация"];
+        return { scenario, dateVal, routeVal, factsVal, guide };
+      }
+
+      function renderReport() {
+        const { scenario, dateVal, routeVal, factsVal, guide } = buildReportData();
+        const reportBox = document.getElementById("reportBox");
+        reportBox.style.display = "block";
+
+        const metaLines = [
+          `<li><strong>Ситуация:</strong> ${escapeHtml(scenario)}</li>`,
+          dateVal ? `<li><strong>Дата события:</strong> ${escapeHtml(dateVal)}</li>` : "",
+          routeVal ? `<li><strong>Маршрут / рейс:</strong> ${escapeHtml(routeVal)}</li>` : "",
+          factsVal ? `<li><strong>Указанные факты:</strong> ${escapeHtml(factsVal)}</li>` : ""
+        ].filter(Boolean).join("");
+
+        const stepsHtml = guide.steps.map((s) => `<li>${escapeHtml(s)}</li>`).join("");
+
+        reportBox.innerHTML = `
+          <div class="report-block">
+            <h4>1. Сводка по введённым данным</h4>
+            <ul>${metaLines}</ul>
+            <p style="margin:8px 0 0; font-size:0.92rem;">${escapeHtml(guide.summary)}</p>
+          </div>
+          <div class="report-block">
+            <h4>2. Рекомендуемый порядок действий</h4>
+            <ul>${stepsHtml}</ul>
+          </div>
+          <div class="report-block">
+            <h4>3. Напоминание о проверке норм</h4>
+            <p style="margin:0; font-size:0.89rem; color:var(--text-muted);">
+              Предварительный справочный расчёт для Республики Казахстан. При подготовке обращения сверяйте актуальные положения законодательства РК и правила конкретного авиаперевозчика.
+            </p>
+          </div>
+        `;
+      }
+
+      function escapeHtml(str) {
+        return String(str)
+          .replace(/&/g, "&amp;")
+          .replace(/</g, "&lt;")
+          .replace(/>/g, "&gt;")
+          .replace(/"/g, "&quot;");
+      }
+
+      function composeClaimTemplate() {
+        const { scenario, dateVal, routeVal, factsVal, guide } = buildReportData();
+        const toVal = document.getElementById("claimTo").value.trim() || "[Наименование авиаперевозчика]";
+        const fromVal = document.getElementById("claimFrom").value.trim() || "[ФИО пассажира, адрес / телефон / e-mail]";
+        const dateStr = dateVal || "[Дата рейса / события]";
+        const routeStr = routeVal || "[Номер рейса и маршрут, например: NQZ — ALA]";
+        const factsStr = factsVal || "[Опишите фактические обстоятельства, время задержки/отмены, выданные документы и понесённые расходы]";
+
+        return [
+          `Кому: ${toVal}`,
+          `От кого: ${fromVal}`,
+          `Дата: ${new Date().toISOString().slice(0, 10)}`,
+          ``,
+          `ПРЕТЕНЗИЯ`,
+          `по ситуации: ${scenario}`,
+          ``,
+          `Я являюсь пассажиром рейса / маршрута (${routeStr}), запланированного на ${dateStr}.`,
+          `В ходе выполнения перевозки возникла ситуация: «${scenario}».`,
+          `Фактические обстоятельства: ${factsStr}.`,
+          ``,
+          `На основании законодательства Республики Казахстан о воздушном транспорте и перевозках прошу рассмотреть настоящее обращение и принять меры в части ${guide.claimFocus}`,
+          ``,
+          `Приложения (при наличии):`,
+          `1. Копия маршрутной квитанции / электронного билета и посадочного талона.`,
+          `2. Документы / уведомления / акты, подтверждающие обстоятельства события или состояние багажа.`,
+          `3. Копии чеков и иных документов, подтверждающих вынужденные расходы.`,
+          ``,
+          `Ответ прошу направить по указанным контактным данным в установленный срок.`,
+          ``,
+          `Подпись: ___________________ / ${fromVal}`
+        ].join("\n");
+      }
+
+      function updateClaimTextarea(statusMessage) {
+        const claimText = document.getElementById("claimText");
+        claimText.value = composeClaimTemplate();
+        const statusEl = document.getElementById("claimStatus");
+        if (statusMessage) {
+          statusEl.textContent = statusMessage;
+        }
+      }
+
+      function jumpToScenario(scenarioName) {
+        const select = document.getElementById("calcScenario");
+        const exists = Array.from(select.options).some((opt) => opt.value === scenarioName);
+        select.value = exists ? scenarioName : "Другая ситуация";
+        renderReport();
+        updateClaimTextarea(`Обновлён проект претензии под сценарий «${select.value}».`);
+        document.getElementById("navigator").scrollIntoView({ behavior: "smooth" });
+      }
+
+      // Pinned menu window controls
+      function syncPinnedPadding() {
+        const isShown = menuPopover.classList.contains("open") && !menuPopover.classList.contains("collapsed");
+        document.body.classList.toggle("has-pinned-menu", isShown);
+      }
+
+      function setMenuOpen(isOpen) {
+        menuPopover.classList.toggle("open", isOpen);
+        const dict = I18N[appState.lang] || I18N.ru;
+        if (isOpen) {
+          menuPopover.classList.remove("collapsed");
+          toggleMenuCollapseBtn.textContent = dict.collapseBtn;
+        }
+        openMenuBtn.setAttribute("aria-expanded", String(isOpen));
+        syncPinnedPadding();
+      }
+
+      toggleMenuCollapseBtn.addEventListener("click", (e) => {
+        e.stopPropagation();
+        const dict = I18N[appState.lang] || I18N.ru;
+        const isCollapsed = menuPopover.classList.toggle("collapsed");
+        toggleMenuCollapseBtn.textContent = isCollapsed ? dict.expandBtn : dict.collapseBtn;
+        syncPinnedPadding();
+      });
+
+      function openColorModal() {
+        syncInputsFromState();
+        renderPalettes();
+        colorModal.classList.add("open");
+      }
+
+      function closeColorModal() {
+        colorModal.classList.remove("open");
+      }
+
+      openMenuBtn.addEventListener("click", (e) => {
+        e.stopPropagation();
+        const isOpen = !menuPopover.classList.contains("open");
+        setMenuOpen(isOpen);
+      });
+
+      closeMenuBtn.addEventListener("click", () => setMenuOpen(false));
+
+      // Language switcher event handlers (syncs both topbar and pinned menu buttons)
+      document.querySelectorAll("[data-lang-choice]").forEach((btn) => {
+        btn.addEventListener("click", () => {
+          const chosen = btn.getAttribute("data-lang-choice");
+          if (I18N[chosen]) {
+            appState.lang = chosen;
+            applyLanguage();
+            savePrefs();
+          }
+        });
+      });
+
+      document.addEventListener("keydown", (e) => {
+        if (e.key === "Escape") {
+          closeColorModal();
+        }
+      });
+
+      openColorModalBtn.addEventListener("click", openColorModal);
+      closeColorModalX.addEventListener("click", closeColorModal);
+
+      colorModal.addEventListener("click", (e) => {
+        if (e.target === colorModal) closeColorModal();
+      });
+
+      document.querySelectorAll("[data-scheme-choice]").forEach((btn) => {
+        btn.addEventListener("click", () => {
+          const choice = btn.getAttribute("data-scheme-choice");
+          appState.mode = choice;
+          const activeScheme = resolveScheme(choice);
+          appState.bg = activeScheme === "dark" ? "#140F13" : "#F5F1E8";
+          syncInputsFromState();
+          applyThemeAndColors();
+        });
+      });
+
+      document.getElementById("colorPrimary").addEventListener("input", (e) => {
+        appState.primary = e.target.value;
+        applyThemeAndColors();
+      });
+
+      document.getElementById("colorSecondary").addEventListener("input", (e) => {
+        appState.secondary = e.target.value;
+        applyThemeAndColors();
+        addSparks(viewW * 0.5, viewH * 0.45, 10);
+      });
+
+      document.getElementById("colorAccent").addEventListener("input", (e) => {
+        appState.accent = e.target.value;
+        applyThemeAndColors();
+        addSparks(viewW * 0.5, viewH * 0.45, 10);
+      });
+
+      document.getElementById("colorBg").addEventListener("input", (e) => {
+        appState.bg = e.target.value;
+        applyThemeAndColors();
+      });
+
+      resetColorsBtn.addEventListener("click", () => {
+        const currentLang = appState.lang;
+        Object.assign(appState, DEFAULT_STATE, { lang: currentLang });
+        syncInputsFromState();
+        applyThemeAndColors();
+        savePrefs();
+        addSparks(viewW * 0.5, viewH * 0.45, 18);
+      });
+
+      confirmColorsOkBtn.addEventListener("click", () => {
+        applyThemeAndColors();
+        savePrefs();
+        closeColorModal();
+        addSparks(viewW * 0.5, viewH * 0.45, 16);
+      });
+
+      if (window.matchMedia) {
+        window.matchMedia("(prefers-color-scheme: dark)").addEventListener("change", () => {
+          if (appState.mode === "system") {
+            if (!appState.bg || appState.bg === "#F5F1E8" || appState.bg === "#140F13") {
+              appState.bg = resolveScheme("system") === "dark" ? "#140F13" : "#F5F1E8";
+              syncInputsFromState();
+            }
+            applyThemeAndColors();
+          }
+        });
+      }
+
+      // Flight & Intro actions
+      topFlightBtn.addEventListener("click", () => {
+        startLeftToRightFlight(false);
+      });
+
+      replayIntroBtn.addEventListener("click", () => {
+        startLeftToRightFlight(true);
+      });
+
+      function dismissIntro() {
+        document.body.classList.remove("intro-active");
+        introStage.classList.add("hidden");
+        planeFlight = null;
+      }
+
+      enterSiteBtn.addEventListener("click", dismissIntro);
+      document.getElementById("closeIntroCornerBtn").addEventListener("click", dismissIntro);
+      introStage.addEventListener("click", (e) => {
+        if (e.target === introStage || e.target === revealBox || e.target.closest("#revealBox")) {
+          dismissIntro();
+        }
+      });
+
+      // Calculator, Cards, Demo board & Claim buttons
+      document.getElementById("buildReportBtn").addEventListener("click", () => {
+        renderReport();
+      });
+
+      document.getElementById("fillClaimFromReportBtn").addEventListener("click", () => {
+        renderReport();
+        updateClaimTextarea("Текст претензии сформирован на основе данных калькулятора.");
+        document.getElementById("documents").scrollIntoView({ behavior: "smooth" });
+      });
+
+      ["calcScenario", "calcDate", "calcRoute", "calcFacts"].forEach((id) => {
+        document.getElementById(id).addEventListener("change", () => {
+          updateClaimTextarea("");
+        });
+      });
+
+      ["claimTo", "claimFrom"].forEach((id) => {
+        document.getElementById(id).addEventListener("input", () => {
+          updateClaimTextarea("");
+        });
+      });
+
+      document.getElementById("regenerateClaimBtn").addEventListener("click", () => {
+        updateClaimTextarea("Шаблон претензии обновлён.");
+      });
+
+      document.getElementById("copyClaimBtn").addEventListener("click", async () => {
+        const text = document.getElementById("claimText").value;
+        const statusEl = document.getElementById("claimStatus");
+        try {
+          if (navigator.clipboard && navigator.clipboard.writeText) {
+            await navigator.clipboard.writeText(text);
+          } else {
+            const ta = document.getElementById("claimText");
+            ta.select();
+            document.execCommand("copy");
+          }
+          statusEl.textContent = "Текст претензии скопирован в буфер обмена.";
+        } catch (_) {
+          statusEl.textContent = "Не удалось скопировать автоматически — выделите текст и нажмите Ctrl/Cmd + C.";
+        }
+      });
+
+      document.getElementById("printClaimBtn").addEventListener("click", () => {
+        window.print();
+      });
+
+      document.addEventListener("click", (e) => {
+        const jumpBtn = e.target.closest("[data-jump-scenario]");
+        if (jumpBtn) {
+          jumpToScenario(jumpBtn.getAttribute("data-jump-scenario"));
+          return;
+        }
+
+        const demoBtn = e.target.closest("[data-demo-flight]");
+        if (demoBtn) {
+          const raw = demoBtn.getAttribute("data-demo-flight") || "";
+          const [route, scenario, facts] = raw.split("|");
+          document.getElementById("calcRoute").value = route || "";
+          if (scenario) document.getElementById("calcScenario").value = scenario;
+          document.getElementById("calcFacts").value = facts || "";
+          renderReport();
+          updateClaimTextarea(`Данные демо-рейса ${route || ""} перенесены.`);
+          document.getElementById("navigator").scrollIntoView({ behavior: "smooth" });
+        }
+      });
+
+      // Init
+      loadPrefs();
+      syncInputsFromState();
+      applyThemeAndColors();
+      setMenuOpen(true);
+      applyLanguage();
+      renderReport();
+      updateClaimTextarea("");
+
+      requestAnimationFrame(animateFrame);
+      startLeftToRightFlight(true);
+    })();
+  </script>
+</body>
+</html>
